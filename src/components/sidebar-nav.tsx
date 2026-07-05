@@ -3,16 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { navItems } from "@/lib/nav-items";
-import { createClient } from "@/lib/supabase/client";
+import { navItems, type AppRole } from "@/lib/nav-items";
+import { useCurrentUser } from "@/components/current-user-provider";
 
-type CurrentUser = {
-  full_name: string;
-  role: "administrador" | "teleoperador" | "vendedor";
-};
-
-const roleLabels: Record<CurrentUser["role"], string> = {
+const roleLabels: Record<AppRole, string> = {
   administrador: "Administrador",
   teleoperador: "Teleoperador",
   vendedor: "Vendedor",
@@ -20,20 +14,11 @@ const roleLabels: Record<CurrentUser["role"], string> = {
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const { currentUser } = useCurrentUser();
 
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase
-        .from("profiles")
-        .select("full_name, role")
-        .eq("id", user.id)
-        .single()
-        .then(({ data }) => setCurrentUser(data as CurrentUser | null));
-    });
-  }, []);
+  const visibleItems = currentUser
+    ? navItems.filter((item) => item.roles.includes(currentUser.role))
+    : [];
 
   return (
     <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col bg-[#eff4ff] px-4 py-6">
@@ -57,12 +42,7 @@ export function SidebarNav() {
       </div>
 
       <nav className="flex-grow space-y-2">
-        {navItems
-          .filter(
-            (item) =>
-              !(item.href === "/leads" && currentUser?.role === "administrador"),
-          )
-          .map((item) => {
+        {visibleItems.map((item) => {
           const isActive =
             item.href === "/"
               ? pathname === "/"

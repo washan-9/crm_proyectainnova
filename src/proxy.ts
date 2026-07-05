@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { canAccess, type AppRole } from "@/lib/nav-items";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -42,6 +43,23 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
+  }
+
+  // Control de acceso por rol: si la pestaña no le corresponde,
+  // se le redirige a Inicio (ver matriz en docs/ROLES.md)
+  if (user && !isLoginPage) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role = (profile?.role ?? null) as AppRole | null;
+    if (!canAccess(request.nextUrl.pathname, role)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

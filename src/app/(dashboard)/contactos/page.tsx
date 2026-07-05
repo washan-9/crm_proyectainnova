@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/components/current-user-provider";
 
 type Tag = "cliente" | "socio" | "proveedor";
 
@@ -9,6 +10,14 @@ type Note = {
   id: string;
   body: string;
   created_at: string;
+  author: { full_name: string } | null;
+};
+
+type Activity = {
+  id: string;
+  type: string;
+  description: string | null;
+  occurred_at: string;
   author: { full_name: string } | null;
 };
 
@@ -22,7 +31,17 @@ type Contact = {
   location: string | null;
   tag: Tag;
   last_interaction_at: string | null;
+  assigned_to: string | null;
+  assignee: { full_name: string } | null;
   contact_notes: Note[];
+};
+
+const activityIcons: Record<string, string> = {
+  llamada: "call",
+  email: "mail",
+  reunion: "groups",
+  nota: "sticky_note_2",
+  otro: "more_horiz",
 };
 
 const tagLabels: Record<Tag, string> = {
@@ -76,16 +95,32 @@ export default function ContactosPage() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState<Tag | "todas">("todas");
+  const { currentUser, loading: userLoading } = useCurrentUser();
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+
+  const isVendedor = currentUser?.role === "vendedor";
 
   useEffect(() => {
+    if (userLoading || !currentUser) return;
     const supabase = createClient();
-    supabase
+
+    let query = supabase
       .from("contacts")
       .select(
         `id, full_name, job_title, company, email, phone, location, tag,
-         last_interaction_at,
+         last_interaction_at, assigned_to,
+         assignee:profiles!assigned_to(full_name),
          contact_notes(id, body, created_at, author:profiles(full_name))`,
-      )
+      );
+
+    // Restricción: el vendedor solo ve los prospectos asignados a él
+    if (currentUser.role === "vendedor") {
+      query = query.eq("assigned_to", currentUser.id);
+    }
+
+    query
       .order("created_at", { ascending: false })
       .order("created_at", {
         referencedTable: "contact_notes",
@@ -101,7 +136,67 @@ export default function ContactosPage() {
         }
         setLoading(false);
       });
-  }, []);
+  }, [currentUser, userLoading]);
+
+  // Historial de interacciones del contacto seleccionado
+  useEffect(() => {
+    if (!selectedId) {
+      setActivities([]);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from("activities")
+      .select(
+        "id, type, description, occurred_at, author:profiles(full_name)",
+      )
+      .eq("contact_id", selectedId)
+      .order("occurred_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) =>
+        setActivities((data ?? []) as unknown as Activity[]),
+      );
+  }, [selectedId]);
+
+  async function handleAddNote(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selectedId) return;
+    setNoteSaving(true);
+
+    const formEl = e.currentTarget;
+    const body = (new FormData(formEl).get("body") as string).trim();
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("contact_notes")
+      .insert({ contact_id: selectedId, body, created_by: user?.id ?? null })
+      .select("id, body, created_at, author:profiles(full_name)")
+      .single();
+
+    setNoteSaving(false);
+    if (error || !data) return;
+
+    const newNote = data as unknown as Note;
+    setContacts((prev) =>
+      prev.map((c) =>
+        c.id === selectedId
+          ? { ...c, contact_notes: [newNote, ...c.contact_notes] }
+          : c,
+      ),
+    );
+    setNoteOpen(false);
+  }
+
+  async function updateTag(contactId: string, tag: Tag) {
+    setContacts((prev) =>
+      prev.map((c) => (c.id === contactId ? { ...c, tag } : c)),
+    );
+    const supabase = createClient();
+    await supabase.from("contacts").update({ tag }).eq("id", contactId);
+  }
 
   const filteredContacts = contacts.filter((contact) => {
     const matchesTag = tagFilter === "todas" || contact.tag === tagFilter;
@@ -124,7 +219,9 @@ export default function ContactosPage() {
             Directorio de Contactos
           </h2>
           <p className="text-base text-[#757684]">
-            Gestiona tus relaciones corporativas e historial de comunicación.
+            {isVendedor
+              ? "Gestiona los prospectos asignados a ti y su historial."
+              : "Gestiona tus relaciones corporativas e historial de comunicación."}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -346,6 +443,28 @@ export default function ContactosPage() {
                       {selected.location ?? "—"}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-xs text-[#757684]">Vendedor asignado</p>
+                    <p className="text-sm font-medium text-[#0b1c30]">
+                      {selected.assignee?.full_name ?? "Sin asignar"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs text-[#757684]">
+                      Estado del prospecto
+                    </p>
+                    <select
+                      value={selected.tag}
+                      onChange={(e) =>
+                        updateTag(selected.id, e.target.value as Tag)
+                      }
+                      className="h-9 w-full rounded-lg border border-[#c4c5d5] bg-white px-3 text-sm font-semibold outline-none focus:border-[#00288e]"
+                    >
+                      <option value="cliente">Cliente</option>
+                      <option value="socio">Socio</option>
+                      <option value="proveedor">Proveedor</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -354,10 +473,32 @@ export default function ContactosPage() {
                   <h5 className="text-xs font-semibold uppercase text-[#00288e]">
                     Notas Recientes
                   </h5>
-                  <button className="text-xs font-bold text-[#00288e] hover:underline">
-                    + Agregar Nota
+                  <button
+                    onClick={() => setNoteOpen((v) => !v)}
+                    className="text-xs font-bold text-[#00288e] hover:underline"
+                  >
+                    {noteOpen ? "Cancelar" : "+ Agregar Nota"}
                   </button>
                 </div>
+                {noteOpen && (
+                  <form onSubmit={handleAddNote} className="space-y-2">
+                    <textarea
+                      name="body"
+                      required
+                      rows={3}
+                      autoFocus
+                      placeholder="Observaciones, intereses del prospecto..."
+                      className="w-full rounded-lg border border-[#c4c5d5] p-3 text-sm outline-none focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/20"
+                    />
+                    <button
+                      type="submit"
+                      disabled={noteSaving}
+                      className="w-full rounded-lg bg-[#00288e] py-2 text-xs font-semibold text-white transition-all hover:bg-[#00288e]/90 disabled:opacity-70"
+                    >
+                      {noteSaving ? "Guardando..." : "Guardar Nota"}
+                    </button>
+                  </form>
+                )}
                 <div className="space-y-2">
                   {selected.contact_notes.length === 0 && (
                     <p className="text-sm text-[#757684]">
@@ -376,6 +517,38 @@ export default function ContactosPage() {
                         {formatDate(note.created_at)} • Por{" "}
                         {note.author?.full_name ?? "Sistema"}
                       </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h5 className="text-xs font-semibold uppercase text-[#00288e]">
+                  Historial de Interacciones
+                </h5>
+                <div className="space-y-2">
+                  {activities.length === 0 && (
+                    <p className="text-sm text-[#757684]">
+                      Sin interacciones registradas.
+                    </p>
+                  )}
+                  {activities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-start gap-3 rounded-lg border border-[#c4c5d5]/30 bg-white p-3"
+                    >
+                      <span className="material-symbols-outlined mt-0.5 rounded-full bg-[#dde1ff] p-1.5 text-[16px] text-[#00288e]">
+                        {activityIcons[activity.type] ?? "history"}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm text-[#0b1c30]">
+                          {activity.description ?? activity.type}
+                        </p>
+                        <p className="text-xs italic text-[#757684]">
+                          {formatDate(activity.occurred_at)} •{" "}
+                          {activity.author?.full_name ?? "Sistema"}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>

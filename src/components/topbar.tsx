@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useNewLead } from "@/components/new-lead-modal";
+import { useCurrentUser } from "@/components/current-user-provider";
 
 type Notification = {
   id: string;
@@ -29,11 +30,17 @@ function timeAgo(iso: string) {
 export function Topbar() {
   const router = useRouter();
   const { openModal } = useNewLead();
+  const { currentUser } = useCurrentUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
+  // Recordatorios (y su campana) son parte del flujo del vendedor
+  const showBell = currentUser?.role === "vendedor";
+  const showNewLead = currentUser?.role === "teleoperador";
+
   useEffect(() => {
+    if (!showBell) return;
     const supabase = createClient();
     supabase
       .from("notifications")
@@ -41,7 +48,7 @@ export function Topbar() {
       .order("created_at", { ascending: false })
       .limit(8)
       .then(({ data }) => setNotifications((data ?? []) as Notification[]));
-  }, []);
+  }, [showBell]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -86,6 +93,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-4">
+        {showBell && (
         <div ref={bellRef} className="relative mr-4">
           <button
             onClick={() => setBellOpen((v) => !v)}
@@ -163,12 +171,15 @@ export function Topbar() {
             </div>
           )}
         </div>
-        <button
-          onClick={openModal}
-          className="rounded-lg bg-[#00288e] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform active:scale-95"
-        >
-          Nuevo Lead
-        </button>
+        )}
+        {showNewLead && (
+          <button
+            onClick={openModal}
+            className="rounded-lg bg-[#00288e] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform active:scale-95"
+          >
+            Nuevo Lead
+          </button>
+        )}
         <button
           onClick={handleLogout}
           title="Cerrar sesión"

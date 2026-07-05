@@ -57,6 +57,7 @@ create table public.contacts (
   location            text,                                -- ej. "Madrid, España"
   tag                 public.contact_tag not null default 'cliente',
   last_interaction_at timestamptz,
+  assigned_to         uuid references public.profiles (id) on delete set null, -- vendedor asignado
   created_by          uuid references public.profiles (id) on delete set null,
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
@@ -181,6 +182,7 @@ create table public.notifications (
 create index idx_leads_status        on public.leads (status);
 create index idx_leads_assigned_to   on public.leads (assigned_to);
 create index idx_contacts_tag        on public.contacts (tag);
+create index idx_contacts_assigned_to on public.contacts (assigned_to);
 create index idx_contact_notes_contact on public.contact_notes (contact_id);
 create index idx_deals_status        on public.deals (status);
 create index idx_deals_owner         on public.deals (owner_id);
@@ -311,13 +313,44 @@ create policy "profile_permissions_select" on public.profile_permissions
 create policy "profile_permissions_admin_write" on public.profile_permissions
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
--- Datos del CRM: acceso completo para el equipo autenticado
-create policy "contacts_all" on public.contacts
-  for all to authenticated using (true) with check (true);
+-- Helper: rol del usuario actual
+create or replace function public.my_role()
+returns public.app_role
+language sql
+stable
+security definer set search_path = public
+as $$
+  select role from public.profiles where id = auth.uid();
+$$;
+
+-- Contactos: el vendedor solo ve/edita sus prospectos asignados;
+-- el admin ve todo; quien crea el contacto (teleoperador al convertir)
+-- también puede verlo
+create policy "contacts_select" on public.contacts
+  for select to authenticated
+  using (
+    public.is_admin()
+    or assigned_to = (select auth.uid())
+    or created_by = (select auth.uid())
+  );
+create policy "contacts_insert" on public.contacts
+  for insert to authenticated with check (true);
+create policy "contacts_update" on public.contacts
+  for update to authenticated
+  using (public.is_admin() or assigned_to = (select auth.uid()))
+  with check (public.is_admin() or assigned_to = (select auth.uid()));
+create policy "contacts_delete" on public.contacts
+  for delete to authenticated
+  using (public.is_admin());
+
 create policy "contact_notes_all" on public.contact_notes
   for all to authenticated using (true) with check (true);
-create policy "leads_all" on public.leads
-  for all to authenticated using (true) with check (true);
+
+-- Leads: solo teleoperador y administrador
+create policy "leads_teleop_admin" on public.leads
+  for all to authenticated
+  using (public.is_admin() or public.my_role() = 'teleoperador')
+  with check (public.is_admin() or public.my_role() = 'teleoperador');
 create policy "deals_all" on public.deals
   for all to authenticated using (true) with check (true);
 create policy "events_all" on public.events

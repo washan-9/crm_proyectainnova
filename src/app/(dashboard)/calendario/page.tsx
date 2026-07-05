@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUser } from "@/components/current-user-provider";
 
 type DbEvent = {
   id: string;
@@ -119,6 +120,9 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 }
 
 export default function CalendarioPage() {
+  const { currentUser } = useCurrentUser();
+  // El administrador solo consulta la programación (matriz de accesos)
+  const readOnly = currentUser?.role === "administrador";
   const [viewDate, setViewDate] = useState(() => new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [detailEvent, setDetailEvent] = useState<DbEvent | null>(null);
@@ -262,9 +266,28 @@ export default function CalendarioPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // Reprogramación: si cambió fecha/hora, se mueve la reunión
+    // conservando su duración original
+    const eventUpdate: Record<string, unknown> = {
+      meeting_notes: notes || null,
+    };
+    const dateStr = form.get("date") as string | null;
+    const timeStr = form.get("time") as string | null;
+    if (dateStr && timeStr) {
+      const newStart = new Date(`${dateStr}T${timeStr}`);
+      const duration = detailEvent.ends_at
+        ? new Date(detailEvent.ends_at).getTime() -
+          new Date(detailEvent.starts_at).getTime()
+        : 60 * 60 * 1000;
+      eventUpdate.starts_at = newStart.toISOString();
+      eventUpdate.ends_at = new Date(
+        newStart.getTime() + duration,
+      ).toISOString();
+    }
+
     const { error: eventError } = await supabase
       .from("events")
-      .update({ meeting_notes: notes || null })
+      .update(eventUpdate)
       .eq("id", detailEvent.id);
 
     if (eventError) {
@@ -303,6 +326,26 @@ export default function CalendarioPage() {
     setDetailEvent(null);
     setVersion((v) => v + 1);
     showToast("Reunión actualizada correctamente.");
+  }
+
+  async function handleCancelMeeting() {
+    if (!detailEvent) return;
+    if (!window.confirm(`¿Cancelar la reunión "${detailEvent.title}"?`)) {
+      return;
+    }
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", detailEvent.id);
+
+    if (error) {
+      setDetailError(error.message);
+      return;
+    }
+    setDetailEvent(null);
+    setVersion((v) => v + 1);
+    showToast("Reunión cancelada.");
   }
 
   function formatOverdueDate(iso: string) {
@@ -426,13 +469,15 @@ export default function CalendarioPage() {
 
         {/* Panel lateral */}
         <div className="col-span-12 flex flex-col gap-6 lg:col-span-3">
-          <button
-            onClick={openModal}
-            className="flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-[#00288e] text-lg font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 active:scale-95"
-          >
-            <span className="material-symbols-outlined">add_circle</span>
-            Agendar Reunión
-          </button>
+          {!readOnly && (
+            <button
+              onClick={openModal}
+              className="flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-[#00288e] text-lg font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 active:scale-95"
+            >
+              <span className="material-symbols-outlined">add_circle</span>
+              Agendar Reunión
+            </button>
+          )}
 
           <div className="rounded-xl border border-[#c4c5d5] bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
@@ -782,6 +827,45 @@ export default function CalendarioPage() {
             </div>
 
             <form className="space-y-6 p-8" onSubmit={handleSaveMeeting}>
+              {!readOnly && (
+                <div className="rounded-xl border border-[#c4c5d5] bg-[#f8f9ff] p-5">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#00288e]">
+                    Reprogramar reunión
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-[#757684]">
+                        Fecha
+                      </label>
+                      <input
+                        type="date"
+                        name="date"
+                        defaultValue={new Date(detailEvent.starts_at)
+                          .toLocaleDateString("sv-SE")}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-[#757684]">
+                        Hora
+                      </label>
+                      <input
+                        type="time"
+                        name="time"
+                        defaultValue={new Date(
+                          detailEvent.starts_at,
+                        ).toLocaleTimeString("es-ES", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {detailEvent.contact ? (
                 <div className="rounded-xl border border-[#c4c5d5] bg-[#f8f9ff] p-5">
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#00288e]">
@@ -800,6 +884,7 @@ export default function CalendarioPage() {
                         name="contact_email"
                         defaultValue={detailEvent.contact.email ?? ""}
                         placeholder="Sin correo"
+                        disabled={readOnly}
                         className={inputClass}
                       />
                     </div>
@@ -812,6 +897,7 @@ export default function CalendarioPage() {
                         name="contact_phone"
                         defaultValue={detailEvent.contact.phone ?? ""}
                         placeholder="Sin teléfono"
+                        disabled={readOnly}
                         className={inputClass}
                       />
                     </div>
@@ -836,7 +922,8 @@ export default function CalendarioPage() {
                   rows={5}
                   defaultValue={detailEvent.meeting_notes ?? ""}
                   placeholder="ej. Se presentó la propuesta comercial, el cliente pidió ajustar el presupuesto..."
-                  className="w-full rounded-lg border border-[#c4c5d5] p-4 text-sm outline-none focus:ring-2 focus:ring-[#00288e]"
+                  disabled={readOnly}
+                  className="w-full rounded-lg border border-[#c4c5d5] p-4 text-sm outline-none focus:ring-2 focus:ring-[#00288e] disabled:bg-[#eff4ff]"
                 />
                 {detailEvent.contact && (
                   <p className="mt-1 text-[11px] text-[#757684]">
@@ -852,21 +939,39 @@ export default function CalendarioPage() {
                 </p>
               )}
 
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setDetailEvent(null)}
-                  className="rounded-lg border border-[#c4c5d5] px-6 py-2 text-sm font-semibold text-[#0b1c30] transition-colors hover:bg-[#eff4ff]"
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="submit"
-                  disabled={detailSaving}
-                  className="rounded-lg bg-[#006a61] px-6 py-2 text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95 disabled:opacity-70"
-                >
-                  {detailSaving ? "Guardando..." : "Guardar Minuta"}
-                </button>
+              <div className="flex items-center justify-between gap-4">
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    onClick={handleCancelMeeting}
+                    className="flex items-center gap-2 rounded-lg border border-[#ba1a1a]/40 px-4 py-2 text-sm font-semibold text-[#ba1a1a] transition-colors hover:bg-[#ba1a1a]/5"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      event_busy
+                    </span>
+                    Cancelar reunión
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setDetailEvent(null)}
+                    className="rounded-lg border border-[#c4c5d5] px-6 py-2 text-sm font-semibold text-[#0b1c30] transition-colors hover:bg-[#eff4ff]"
+                  >
+                    Cerrar
+                  </button>
+                  {!readOnly && (
+                    <button
+                      type="submit"
+                      disabled={detailSaving}
+                      className="rounded-lg bg-[#006a61] px-6 py-2 text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95 disabled:opacity-70"
+                    >
+                      {detailSaving ? "Guardando..." : "Guardar Cambios"}
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           </div>

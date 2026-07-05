@@ -120,7 +120,7 @@ supabase/
 
 Definidos en la base de datos (`supabase/schema.sql`):
 
-- **Roles** (`profiles.role`): `administrador`, `teleoperador`, `vendedor`
-- Si tu base de datos se creó antes de julio 2026, ejecuta `supabase/migration_2026-07-05_roles_reuniones.sql` en el SQL Editor para actualizar roles, el estado `inhabilitado` y la columna de minutas de reunión
+- **Roles** (`profiles.role`): `administrador`, `teleoperador`, `vendedor` — la matriz completa de accesos por pestaña está en [`docs/ROLES.md`](docs/ROLES.md)
+- Si tu base de datos se creó antes de julio 2026, ejecuta en el SQL Editor (en este orden): `supabase/migration_2026-07-05_roles_reuniones.sql` y luego `supabase/migration_2026-07-05_accesos_por_rol.sql`
 - **Permisos granulares**: tabla `permissions` + `profile_permissions`, gestionables desde la pantalla de Usuarios
 - **RLS**: los perfiles solo se editan a sí mismos; catálogos de permisos solo los escriben administradores; las notificaciones son privadas por usuario
