@@ -1,4 +1,20 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useNewLead } from "@/components/new-lead-modal";
+
 export function Topbar() {
+  const router = useRouter();
+  const { openModal } = useNewLead();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <header className="fixed right-0 top-0 z-40 flex h-16 w-[calc(100%-16rem)] items-center justify-between border-b border-[#c4c5d5] bg-[#f8f9ff] px-8">
       <div className="flex flex-1 items-center">
@@ -19,18 +35,22 @@ export function Topbar() {
           <button className="rounded-full p-2 text-[#444653] transition-colors hover:text-[#00288e]">
             <span className="material-symbols-outlined">notifications</span>
           </button>
-          <button className="rounded-full p-2 text-[#444653] transition-colors hover:text-[#00288e]">
-            <span className="material-symbols-outlined">settings</span>
-          </button>
-          <button className="rounded-full p-2 text-[#444653] transition-colors hover:text-[#00288e]">
-            <span className="material-symbols-outlined">help</span>
-          </button>
         </div>
         <button className="rounded-lg px-4 py-2 text-sm font-semibold text-[#00288e] transition-colors hover:bg-[#dde1ff]">
           Soporte
         </button>
-        <button className="rounded-lg bg-[#00288e] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform active:scale-95">
+        <button
+          onClick={openModal}
+          className="rounded-lg bg-[#00288e] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform active:scale-95"
+        >
           Nuevo Lead
+        </button>
+        <button
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          className="rounded-full p-2 text-[#444653] transition-colors hover:text-[#ba1a1a]"
+        >
+          <span className="material-symbols-outlined">logout</span>
         </button>
       </div>
     </header>

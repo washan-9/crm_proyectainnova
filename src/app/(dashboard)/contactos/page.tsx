@@ -1,117 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
-type Tag = "Cliente" | "Socio" | "Proveedor";
+type Tag = "cliente" | "socio" | "proveedor";
 
 type Note = {
-  text: string;
-  meta: string;
+  id: string;
+  body: string;
+  created_at: string;
+  author: { full_name: string } | null;
 };
 
 type Contact = {
   id: string;
-  name: string;
-  role: string;
-  company: string;
-  email: string;
-  phone: string;
-  lastInteraction: string;
-  location: string;
+  full_name: string;
+  job_title: string | null;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
   tag: Tag;
-  avatarBg: string;
-  avatarText: string;
-  notes: Note[];
+  last_interaction_at: string | null;
+  contact_notes: Note[];
 };
 
-const contacts: Contact[] = [
-  {
-    id: "1",
-    name: "Elena Rodriguez",
-    role: "CTO",
-    company: "InnovaSoft Tech",
-    email: "elena.r@innovasoft.com",
-    phone: "+34 912 345 678",
-    lastInteraction: "Hace 2 horas",
-    location: "Madrid, España",
-    tag: "Socio",
-    avatarBg: "bg-[#6bd8cb]",
-    avatarText: "text-[#00201d]",
-    notes: [
-      {
-        text: "Discutimos los planes de expansión de Q4. Elena está interesada en nuestra nueva suite de automatización.",
-        meta: "24 oct 2025 • Por Alex R.",
-      },
-      {
-        text: "Se envió seguimiento sobre el documento de integración de API.",
-        meta: "15 oct 2025 • Por Sistema",
-      },
-    ],
-  },
-  {
-    id: "2",
-    name: "Julian Dupont",
-    role: "Lead Designer",
-    company: "Aesthetic Dynamics",
-    email: "julian@aesthetix.co",
-    phone: "+33 1 23 45 67 89",
-    lastInteraction: "Ayer",
-    location: "París, Francia",
-    tag: "Cliente",
-    avatarBg: "bg-[#1e40af]",
-    avatarText: "text-white",
-    notes: [
-      {
-        text: "Aprobó el nuevo diseño de la landing page.",
-        meta: "20 oct 2025 • Por Alex R.",
-      },
-    ],
-  },
-  {
-    id: "3",
-    name: "Marcus Thorne",
-    role: "Gerente de Compras",
-    company: "Global Logistics Inc.",
-    email: "m.thorne@global-log.com",
-    phone: "+44 20 7946 0123",
-    lastInteraction: "Hace 3 días",
-    location: "Londres, Reino Unido",
-    tag: "Proveedor",
-    avatarBg: "bg-[#e0e3e5]",
-    avatarText: "text-[#323537]",
-    notes: [
-      {
-        text: "Renegociación de tarifas de envío pendiente para el próximo trimestre.",
-        meta: "18 oct 2025 • Por Sistema",
-      },
-    ],
-  },
-  {
-    id: "4",
-    name: "Sarah Jenkins",
-    role: "Directora de Marketing",
-    company: "Pioneer Brands",
-    email: "sjenkins@pioneer.com",
-    phone: "+1 212 555 0198",
-    lastInteraction: "12 oct 2025",
-    location: "Nueva York, EE. UU.",
-    tag: "Cliente",
-    avatarBg: "bg-[#dde1ff]",
-    avatarText: "text-[#00288e]",
-    notes: [
-      {
-        text: "Interesada en el paquete de campaña anual.",
-        meta: "12 oct 2025 • Por Alex R.",
-      },
-    ],
-  },
-];
+const tagLabels: Record<Tag, string> = {
+  cliente: "Cliente",
+  socio: "Socio",
+  proveedor: "Proveedor",
+};
 
 const tagStyles: Record<Tag, string> = {
-  Cliente: "bg-[#00288e]/10 text-[#00288e]",
-  Socio: "bg-[#006a61]/10 text-[#006a61]",
-  Proveedor: "bg-[#323537]/10 text-[#323537]",
+  cliente: "bg-[#00288e]/10 text-[#00288e]",
+  socio: "bg-[#006a61]/10 text-[#006a61]",
+  proveedor: "bg-[#323537]/10 text-[#323537]",
 };
+
+const avatarPalette = [
+  { bg: "bg-[#6bd8cb]", text: "text-[#00201d]" },
+  { bg: "bg-[#1e40af]", text: "text-white" },
+  { bg: "bg-[#e0e3e5]", text: "text-[#323537]" },
+  { bg: "bg-[#dde1ff]", text: "text-[#00288e]" },
+];
+
+function avatarFor(name: string) {
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+  return avatarPalette[hash % avatarPalette.length];
+}
 
 function initials(name: string) {
   return name
@@ -122,9 +59,47 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ContactosPage() {
-  const [selectedId, setSelectedId] = useState<string | null>(contacts[0].id);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("contacts")
+      .select(
+        `id, full_name, job_title, company, email, phone, location, tag,
+         last_interaction_at,
+         contact_notes(id, body, created_at, author:profiles(full_name))`,
+      )
+      .order("created_at", { ascending: false })
+      .order("created_at", {
+        referencedTable: "contact_notes",
+        ascending: false,
+      })
+      .then(({ data, error }) => {
+        if (error) {
+          setLoadError(error.message);
+        } else {
+          const rows = (data ?? []) as unknown as Contact[];
+          setContacts(rows);
+          if (rows.length > 0) setSelectedId(rows[0].id);
+        }
+        setLoading(false);
+      });
+  }, []);
 
   const selected = contacts.find((c) => c.id === selectedId) ?? null;
 
@@ -183,87 +158,96 @@ export default function ContactosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#c4c5d5]">
-                {contacts.map((contact) => (
-                  <tr
-                    key={contact.id}
-                    onClick={() => {
-                      setSelectedId(contact.id);
-                      setDrawerOpen(true);
-                    }}
-                    className={`cursor-pointer transition-colors hover:bg-[#eff4ff] ${
-                      selectedId === contact.id ? "bg-[#e5eeff]" : "bg-white"
-                    }`}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${contact.avatarBg} ${contact.avatarText}`}
-                        >
-                          {initials(contact.name)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#0b1c30]">
-                            {contact.name}
-                          </p>
-                          <p className="text-xs text-[#757684]">
-                            {contact.role}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#757684]">
-                      {contact.company}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#757684]">
-                      {contact.email}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#757684]">
-                      {contact.phone}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#757684]">
-                      {contact.lastInteraction}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${tagStyles[contact.tag]}`}
-                      >
-                        {contact.tag}
-                      </span>
+                {loading && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-center text-sm text-[#757684]"
+                    >
+                      Cargando contactos...
                     </td>
                   </tr>
-                ))}
+                )}
+                {loadError && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-center text-sm text-[#ba1a1a]"
+                    >
+                      Error al cargar contactos: {loadError}
+                    </td>
+                  </tr>
+                )}
+                {!loading && !loadError && contacts.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-center text-sm text-[#757684]"
+                    >
+                      Aún no hay contactos registrados.
+                    </td>
+                  </tr>
+                )}
+                {contacts.map((contact) => {
+                  const avatar = avatarFor(contact.full_name);
+                  return (
+                    <tr
+                      key={contact.id}
+                      onClick={() => {
+                        setSelectedId(contact.id);
+                        setDrawerOpen(true);
+                      }}
+                      className={`cursor-pointer transition-colors hover:bg-[#eff4ff] ${
+                        selectedId === contact.id ? "bg-[#e5eeff]" : "bg-white"
+                      }`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${avatar.bg} ${avatar.text}`}
+                          >
+                            {initials(contact.full_name)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#0b1c30]">
+                              {contact.full_name}
+                            </p>
+                            <p className="text-xs text-[#757684]">
+                              {contact.job_title ?? "—"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#757684]">
+                        {contact.company ?? "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#757684]">
+                        {contact.email ?? "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#757684]">
+                        {contact.phone ?? "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#757684]">
+                        {formatDate(contact.last_interaction_at)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${tagStyles[contact.tag]}`}
+                        >
+                          {tagLabels[contact.tag]}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <div className="flex items-center justify-between border-t border-[#c4c5d5] bg-white p-6">
             <p className="text-sm text-[#757684]">
-              Mostrando {contacts.length} de 258 contactos
+              Mostrando {contacts.length} contactos
             </p>
-            <div className="flex gap-2">
-              <button
-                disabled
-                className="rounded-lg border border-[#c4c5d5] p-2 text-[#757684] disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined">
-                  chevron_left
-                </span>
-              </button>
-              <button className="h-10 w-10 rounded-lg bg-[#00288e] text-sm font-semibold text-white">
-                1
-              </button>
-              <button className="h-10 w-10 rounded-lg border border-[#c4c5d5] text-sm font-semibold text-[#757684] hover:bg-[#eff4ff]">
-                2
-              </button>
-              <button className="h-10 w-10 rounded-lg border border-[#c4c5d5] text-sm font-semibold text-[#757684] hover:bg-[#eff4ff]">
-                3
-              </button>
-              <button className="rounded-lg border border-[#c4c5d5] p-2 text-[#757684] hover:bg-[#eff4ff]">
-                <span className="material-symbols-outlined">
-                  chevron_right
-                </span>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -285,15 +269,16 @@ export default function ContactosPage() {
             <div className="flex-grow space-y-8 overflow-y-auto p-6">
               <div className="text-center">
                 <div
-                  className={`mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-[#e5eeff] text-2xl font-bold shadow-md ${selected.avatarBg} ${selected.avatarText}`}
+                  className={`mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-[#e5eeff] text-2xl font-bold shadow-md ${avatarFor(selected.full_name).bg} ${avatarFor(selected.full_name).text}`}
                 >
-                  {initials(selected.name)}
+                  {initials(selected.full_name)}
                 </div>
                 <h4 className="text-xl font-bold text-[#0b1c30]">
-                  {selected.name}
+                  {selected.full_name}
                 </h4>
                 <p className="text-[#757684]">
-                  {selected.role} en {selected.company}
+                  {selected.job_title ?? "—"}
+                  {selected.company ? ` en ${selected.company}` : ""}
                 </p>
                 <div className="mt-4 flex justify-center gap-2">
                   <button className="rounded-full bg-[#00288e] p-2 text-white transition-all hover:shadow-md active:scale-90">
@@ -320,19 +305,19 @@ export default function ContactosPage() {
                       Correo electrónico
                     </p>
                     <p className="text-sm font-medium text-[#0b1c30]">
-                      {selected.email}
+                      {selected.email ?? "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[#757684]">Teléfono</p>
                     <p className="text-sm font-medium text-[#0b1c30]">
-                      {selected.phone}
+                      {selected.phone ?? "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[#757684]">Ubicación</p>
                     <p className="text-sm font-medium text-[#0b1c30]">
-                      {selected.location}
+                      {selected.location ?? "—"}
                     </p>
                   </div>
                 </div>
@@ -348,37 +333,25 @@ export default function ContactosPage() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {selected.notes.map((note, i) => (
+                  {selected.contact_notes.length === 0 && (
+                    <p className="text-sm text-[#757684]">
+                      Sin notas todavía.
+                    </p>
+                  )}
+                  {selected.contact_notes.map((note) => (
                     <div
-                      key={i}
+                      key={note.id}
                       className="rounded-lg border border-[#c4c5d5]/30 bg-[#eff4ff] p-4"
                     >
                       <p className="mb-1 text-sm text-[#0b1c30]">
-                        {note.text}
+                        {note.body}
                       </p>
                       <p className="text-xs italic text-[#757684]">
-                        {note.meta}
+                        {formatDate(note.created_at)} • Por{" "}
+                        {note.author?.full_name ?? "Sistema"}
                       </p>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              <div>
-                <h5 className="mb-4 border-b border-[#00288e]/20 pb-1 text-xs font-semibold uppercase text-[#00288e]">
-                  Cuentas Conectadas
-                </h5>
-                <div className="flex gap-4">
-                  <span className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[#c4c5d5] bg-[#e5eeff] transition-all hover:bg-[#1e40af] hover:text-white">
-                    <span className="material-symbols-outlined text-[18px]">
-                      share
-                    </span>
-                  </span>
-                  <span className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[#c4c5d5] bg-[#e5eeff] transition-all hover:bg-[#1e40af] hover:text-white">
-                    <span className="material-symbols-outlined text-[18px]">
-                      public
-                    </span>
-                  </span>
                 </div>
               </div>
             </div>

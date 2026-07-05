@@ -3,10 +3,37 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { navItems } from "@/lib/nav-items";
+import { createClient } from "@/lib/supabase/client";
+
+type CurrentUser = {
+  full_name: string;
+  role: "administrador" | "gerente" | "colaborador";
+};
+
+const roleLabels: Record<CurrentUser["role"], string> = {
+  administrador: "Administrador",
+  gerente: "Gerente",
+  colaborador: "Colaborador",
+};
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("profiles")
+        .select("full_name, role")
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => setCurrentUser(data as CurrentUser | null));
+    });
+  }, []);
 
   return (
     <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col bg-[#eff4ff] px-4 py-6">
@@ -53,21 +80,28 @@ export function SidebarNav() {
         })}
       </nav>
 
-      <div className="mt-6 border-t border-[#c4c5d5]/30 pt-6">
-        <div className="flex items-center gap-3 rounded-xl bg-[#e5eeff] px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#00288e] text-sm font-bold text-white">
-            ?
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-[#0b1c30]">
-              Usuario
-            </span>
-            <span className="text-[10px] font-semibold text-[#757684]">
-              Sin sesión
-            </span>
+      {currentUser && (
+        <div className="mt-6 border-t border-[#c4c5d5]/30 pt-6">
+          <div className="flex items-center gap-3 rounded-xl bg-[#e5eeff] px-4 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#00288e] text-sm font-bold text-white">
+              {currentUser.full_name
+                .split(" ")
+                .slice(0, 2)
+                .map((p) => p[0])
+                .join("")
+                .toUpperCase()}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-[#0b1c30]">
+                {currentUser.full_name}
+              </span>
+              <span className="text-[10px] font-semibold text-[#757684]">
+                {roleLabels[currentUser.role]}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }

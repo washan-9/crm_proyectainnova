@@ -1,79 +1,47 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useNewLead } from "@/components/new-lead-modal";
 
-type LeadStatus = "Nuevo" | "Contactado" | "Calificado" | "Perdido";
+type LeadStatus = "nuevo" | "contactado" | "calificado" | "perdido";
 
 type Lead = {
   id: string;
-  name: string;
-  email: string;
-  company: string;
+  full_name: string;
+  email: string | null;
+  company: string | null;
   status: LeadStatus;
-  lastContact: string;
-  avatarBg: string;
-  avatarText: string;
+  last_contact_at: string | null;
 };
 
-const leads: Lead[] = [
-  {
-    id: "1",
-    name: "Jordan Davenport",
-    email: "jordan@davenport.io",
-    company: "Davenport Tech Solutions",
-    status: "Nuevo",
-    lastContact: "24 oct 2025",
-    avatarBg: "bg-[#b8c4ff]",
-    avatarText: "text-[#001453]",
-  },
-  {
-    id: "2",
-    name: "Elena Rodriguez",
-    email: "e.rodriguez@nexustech.com",
-    company: "Nexus Tech",
-    status: "Contactado",
-    lastContact: "23 oct 2025",
-    avatarBg: "bg-[#dde1ff]",
-    avatarText: "text-[#00288e]",
-  },
-  {
-    id: "3",
-    name: "Marcus Bennett",
-    email: "mbennett@vertex.co",
-    company: "Vertex Industries",
-    status: "Calificado",
-    lastContact: "21 oct 2025",
-    avatarBg: "bg-[#6bd8cb]",
-    avatarText: "text-[#00201d]",
-  },
-  {
-    id: "4",
-    name: "Simon Thorne",
-    email: "sthorne@ironclad.io",
-    company: "Ironclad Logistics",
-    status: "Perdido",
-    lastContact: "18 oct 2025",
-    avatarBg: "bg-[#e0e3e5]",
-    avatarText: "text-[#323537]",
-  },
-  {
-    id: "5",
-    name: "Alicia Low",
-    email: "a.low@cloudforge.com",
-    company: "CloudForge",
-    status: "Nuevo",
-    lastContact: "25 oct 2025",
-    avatarBg: "bg-[#1e40af]",
-    avatarText: "text-[#a8b8ff]",
-  },
-];
+const statusLabels: Record<LeadStatus, string> = {
+  nuevo: "Nuevo",
+  contactado: "Contactado",
+  calificado: "Calificado",
+  perdido: "Perdido",
+};
 
 const statusStyles: Record<LeadStatus, string> = {
-  Nuevo: "bg-[#00288e]/10 text-[#00288e]",
-  Contactado: "bg-[#006a61]/10 text-[#006a61]",
-  Calificado: "bg-[#6bd8cb]/30 text-[#00201d]",
-  Perdido: "bg-[#ba1a1a]/10 text-[#ba1a1a]",
+  nuevo: "bg-[#00288e]/10 text-[#00288e]",
+  contactado: "bg-[#006a61]/10 text-[#006a61]",
+  calificado: "bg-[#6bd8cb]/30 text-[#00201d]",
+  perdido: "bg-[#ba1a1a]/10 text-[#ba1a1a]",
 };
+
+const avatarPalette = [
+  { bg: "bg-[#b8c4ff]", text: "text-[#001453]" },
+  { bg: "bg-[#dde1ff]", text: "text-[#00288e]" },
+  { bg: "bg-[#6bd8cb]", text: "text-[#00201d]" },
+  { bg: "bg-[#e0e3e5]", text: "text-[#323537]" },
+  { bg: "bg-[#1e40af]", text: "text-[#a8b8ff]" },
+];
+
+function avatarFor(name: string) {
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+  return avatarPalette[hash % avatarPalette.length];
+}
 
 function initials(name: string) {
   return name
@@ -84,11 +52,40 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function LeadsPage() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "Todos">(
     "Todos",
   );
   const [search, setSearch] = useState("");
+  const { version } = useNewLead();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("leads")
+      .select("id, full_name, email, company, status, last_contact_at")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          setLoadError(error.message);
+        } else {
+          setLeads(data ?? []);
+        }
+        setLoading(false);
+      });
+  }, [version]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -97,11 +94,11 @@ export default function LeadsPage() {
       const term = search.toLowerCase();
       const matchesSearch =
         term === "" ||
-        lead.name.toLowerCase().includes(term) ||
-        lead.company.toLowerCase().includes(term);
+        lead.full_name.toLowerCase().includes(term) ||
+        (lead.company ?? "").toLowerCase().includes(term);
       return matchesStatus && matchesSearch;
     });
-  }, [statusFilter, search]);
+  }, [leads, statusFilter, search]);
 
   return (
     <>
@@ -133,10 +130,10 @@ export default function LeadsPage() {
             className="rounded-lg border border-[#c4c5d5] bg-[#e5eeff] px-4 py-1.5 text-sm focus:border-[#00288e] focus:ring-[#00288e]"
           >
             <option value="Todos">Todos los estados</option>
-            <option value="Nuevo">Nuevo</option>
-            <option value="Contactado">Contactado</option>
-            <option value="Calificado">Calificado</option>
-            <option value="Perdido">Perdido</option>
+            <option value="nuevo">Nuevo</option>
+            <option value="contactado">Contactado</option>
+            <option value="calificado">Calificado</option>
+            <option value="perdido">Perdido</option>
           </select>
         </div>
 
@@ -198,51 +195,81 @@ export default function LeadsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#c4c5d5]">
-            {filteredLeads.map((lead) => (
-              <tr
-                key={lead.id}
-                className="cursor-pointer transition-colors hover:bg-[#eff4ff]"
-              >
-                <td className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${lead.avatarBg} ${lead.avatarText}`}
-                    >
-                      {initials(lead.name)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#0b1c30]">
-                        {lead.name}
-                      </p>
-                      <p className="text-xs text-[#757684]">{lead.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-6 text-sm text-[#0b1c30]">{lead.company}</td>
-                <td className="p-6">
-                  <span
-                    className={`rounded-full px-4 py-1 text-xs font-semibold ${statusStyles[lead.status]}`}
-                  >
-                    {lead.status}
-                  </span>
-                </td>
-                <td className="p-6 text-sm text-[#757684]">
-                  {lead.lastContact}
-                </td>
-                <td className="p-6 text-right">
-                  <button className="material-symbols-outlined text-[#757684] hover:text-[#00288e]">
-                    more_vert
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {filteredLeads.length === 0 && (
+            {loading && (
               <tr>
                 <td
                   colSpan={5}
                   className="p-6 text-center text-sm text-[#757684]"
                 >
-                  No se encontraron leads con esos filtros.
+                  Cargando leads...
+                </td>
+              </tr>
+            )}
+            {loadError && (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="p-6 text-center text-sm text-[#ba1a1a]"
+                >
+                  Error al cargar leads: {loadError}
+                </td>
+              </tr>
+            )}
+            {!loading &&
+              filteredLeads.map((lead) => {
+                const avatar = avatarFor(lead.full_name);
+                return (
+                  <tr
+                    key={lead.id}
+                    className="cursor-pointer transition-colors hover:bg-[#eff4ff]"
+                  >
+                    <td className="p-6">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${avatar.bg} ${avatar.text}`}
+                        >
+                          {initials(lead.full_name)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#0b1c30]">
+                            {lead.full_name}
+                          </p>
+                          <p className="text-xs text-[#757684]">
+                            {lead.email ?? "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-6 text-sm text-[#0b1c30]">
+                      {lead.company ?? "—"}
+                    </td>
+                    <td className="p-6">
+                      <span
+                        className={`rounded-full px-4 py-1 text-xs font-semibold ${statusStyles[lead.status]}`}
+                      >
+                        {statusLabels[lead.status]}
+                      </span>
+                    </td>
+                    <td className="p-6 text-sm text-[#757684]">
+                      {formatDate(lead.last_contact_at)}
+                    </td>
+                    <td className="p-6 text-right">
+                      <button className="material-symbols-outlined text-[#757684] hover:text-[#00288e]">
+                        more_vert
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            {!loading && !loadError && filteredLeads.length === 0 && (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="p-6 text-center text-sm text-[#757684]"
+                >
+                  {leads.length === 0
+                    ? "Aún no hay leads registrados."
+                    : "No se encontraron leads con esos filtros."}
                 </td>
               </tr>
             )}
@@ -253,32 +280,9 @@ export default function LeadsPage() {
           <p className="text-sm text-[#757684]">
             Mostrando {filteredLeads.length} de {leads.length} leads
           </p>
-          <div className="flex gap-2">
-            <button
-              disabled
-              className="rounded-lg border border-[#c4c5d5] p-1 text-[#757684] disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined">chevron_left</span>
-            </button>
-            <button className="rounded-lg bg-[#00288e] px-4 py-1 text-sm font-semibold text-white">
-              1
-            </button>
-            <button className="rounded-lg border border-[#c4c5d5] px-4 py-1 text-sm font-semibold text-[#0b1c30] hover:bg-white">
-              2
-            </button>
-            <button className="rounded-lg border border-[#c4c5d5] px-4 py-1 text-sm font-semibold text-[#0b1c30] hover:bg-white">
-              3
-            </button>
-            <button className="rounded-lg border border-[#c4c5d5] p-1 text-[#757684] hover:bg-white">
-              <span className="material-symbols-outlined">chevron_right</span>
-            </button>
-          </div>
         </div>
       </div>
 
-      <button className="fixed bottom-8 right-8 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#00288e] text-white shadow-lg transition-all hover:scale-110 active:scale-95">
-        <span className="material-symbols-outlined">add</span>
-      </button>
     </>
   );
 }
