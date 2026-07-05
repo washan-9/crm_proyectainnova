@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Proyecta Innova · CRM Mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E2A22;
+    --soil:#6B4F3B;
+    --soil-dark:#54392A;
+    --sage:#7C9473;
+    --sage-light:#E4EBDF;
+    --sand:#F3ECDD;
+    --sand-deep:#E9DEC7;
+    --paper:#FBF8F1;
+    --terracotta:#C4622D;
+    --slate:#3D4F4A;
+    --line:#DCD2B8;
+    --white:#FFFFFF;
+    --danger:#B3452F;
+    --font-display:'Fraunces', serif;
+    --font-body:'IBM Plex Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:var(--font-body);
+    background:var(--sand);
+    color:var(--ink);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+
+  /* ---------- Topographic signature pattern ---------- */
+  .topo-bg{
+    position:absolute; inset:0; z-index:0; opacity:0.5; pointer-events:none;
+  }
+
+  /* ================= LOGIN SCREEN ================= */
+  #screen-login{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(124,148,115,0.15), transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(107,79,59,0.12), transparent 50%),
+      var(--sand);
+    overflow:hidden;
+  }
+  .login-card{
+    position:relative; z-index:1;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:4px;
+    width:min(920px, 92vw);
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    box-shadow:0 24px 60px -20px rgba(30,42,34,0.35);
+    overflow:hidden;
+  }
+  .login-visual{
+    background:linear-gradient(160deg, var(--slate), var(--ink));
+    position:relative;
+    padding:48px 40px;
+    color:var(--sand);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    overflow:hidden;
+  }
+  .login-visual svg{position:absolute; inset:0; width:100%; height:100%; opacity:0.35;}
+  .login-visual .brand-eyebrow{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--sage); position:relative; z-index:1;
+  }
+  .login-visual h1{
+    font-family:var(--font-display); font-weight:600; font-size:clamp(28px,3.4vw,38px);
+    line-height:1.08; margin-top:18px; position:relative; z-index:1; max-width:280px;
+  }
+  .login-visual p{
+    font-size:13.5px; line-height:1.6; color:#C9D2C5; margin-top:16px; max-width:260px; position:relative; z-index:1;
+  }
+  .login-visual .plot-stat{
+    position:relative; z-index:1; display:flex; gap:28px; margin-top:auto; padding-top:24px;
+    border-top:1px solid rgba(255,255,255,0.12);
+  }
+  .plot-stat div b{display:block; font-family:var(--font-display); font-size:22px; font-weight:600;}
+  .plot-stat div span{font-size:11px; color:#9FAE9A; letter-spacing:0.04em;}
+
+  .login-form{padding:48px 44px; display:flex; flex-direction:column;}
+  .login-form .eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:0.14em; color:var(--soil); text-transform:uppercase;}
+  .login-form h2{font-family:var(--font-display); font-size:26px; font-weight:600; margin-top:10px; color:var(--ink);}
+  .login-form .sub{font-size:13.5px; color:#6B6255; margin-top:6px; margin-bottom:28px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:12px; font-weight:600; color:var(--slate); margin-bottom:6px;}
+  .field input, .field select{
+    width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:3px;
+    font-family:var(--font-body); font-size:14px; background:var(--white); color:var(--ink);
+    transition:border-color .15s;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--soil); box-shadow:0 0 0 3px rgba(107,79,59,0.12);}
+  .field-hint{font-size:11px; color:#8A8072; margin-top:5px;}
+  .btn-primary{
+    background:var(--soil); color:var(--paper); border:none; padding:12px 18px; border-radius:3px;
+    font-family:var(--font-body); font-weight:600; font-size:14px; cursor:pointer; margin-top:8px;
+    transition:background .15s; letter-spacing:0.01em;
+  }
+  .btn-primary:hover{background:var(--soil-dark);}
+  .role-select{display:flex; gap:8px; margin-top:24px;}
+  .role-chip{
+    flex:1; text-align:center; padding:9px 6px; border:1.5px solid var(--line); border-radius:3px;
+    font-size:12px; font-weight:600; color:var(--slate); cursor:pointer; background:var(--white);
+  }
+  .role-chip.active{background:var(--sage-light); border-color:var(--sage); color:var(--slate);}
+  .login-footer-note{margin-top:auto; padding-top:20px; font-size:11px; color:#9C9384;}
+
+  /* ================= APP SHELL ================= */
+  #app-shell{display:none; min-height:100vh;}
+  #app-shell.visible{display:grid; grid-template-columns:230px 1fr;}
+
+  .sidebar{
+    background:var(--ink); color:var(--sand);
+    padding:22px 16px; display:flex; flex-direction:column; gap:2px;
+    position:relative; overflow:hidden;
+  }
+  .sidebar-logo{
+    display:flex; align-items:center; gap:9px; padding:6px 8px 20px 8px; position:relative; z-index:1;
+  }
+  .sidebar-logo .mark{
+    width:26px; height:26px; border-radius:3px; background:var(--sage);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .sidebar-logo .mark svg{width:15px; height:15px;}
+  .sidebar-logo b{font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:0.01em; line-height:1.1; display:block;}
+  .sidebar-logo span{font-size:9.5px; color:#8FA187; letter-spacing:0.06em; text-transform:uppercase;}
+
+  .nav-section-label{
+    font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    color:#6E7C68; padding:14px 10px 6px 10px; position:relative; z-index:1;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:3px; cursor:pointer;
+    font-size:13px; font-weight:500; color:#C7D0C2; position:relative; z-index:1;
+  }
+  .nav-item:hover{background:rgba(255,255,255,0.05);}
+  .nav-item.active{background:var(--sage); color:var(--ink); font-weight:600;}
+  .nav-item .dot{width:5px; height:5px; border-radius:50%; background:currentColor; opacity:0.5;}
+  .nav-item .badge{
+    margin-left:auto; background:var(--terracotta); color:white; font-size:10px; font-weight:700;
+    padding:1px 6px; border-radius:20px;
+  }
+  .sidebar-user{
+    margin-top:auto; padding:12px 10px; border-top:1px solid rgba(255,255,255,0.08); position:relative; z-index:1;
+    display:flex; align-items:center; gap:9px;
+  }
+  .sidebar-user .avatar{
+    width:30px; height:30px; border-radius:50%; background:var(--soil); color:white;
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; font-family:var(--font-display);
+  }
+  .sidebar-user b{font-size:12.5px; display:block; color:var(--sand);}
+  .sidebar-user span{font-size:10.5px; color:#8FA187;}
+
+  .main{background:var(--paper); overflow-y:auto; height:100vh;}
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 32px; border-bottom:1px solid var(--line); background:var(--paper);
+    position:sticky; top:0; z-index:5;
+  }
+  .topbar h1{font-family:var(--font-display); font-size:22px; font-weight:600;}
+  .topbar .breadcrumb{font-family:var(--font-mono); font-size:11px; color:var(--soil); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:2px;}
+  .topbar-actions{display:flex; gap:10px; align-items:center;}
+  .icon-btn{
+    width:34px; height:34px; border-radius:3px; border:1.5px solid var(--line); background:var(--white);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;
+  }
+  .icon-btn .ping{
+    position:absolute; top:-3px; right:-3px; width:8px; height:8px; border-radius:50%; background:var(--terracotta);
+    border:1.5px solid var(--paper);
+  }
+  .content{padding:28px 32px 60px;}
+
+  /* Stat cards */
+  .stat-row{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px;}
+  .stat-card{
+    background:var(--white); border:1px solid var(--line); border-radius:4px; padding:16px 18px; position:relative; overflow:hidden;
+  }
+  .stat-card .label{font-size:11.5px; color:#8A8072; font-weight:600; letter-spacing:0.02em;}
+  .stat-card .value{font-family:var(--font-display); font-size:28px; font-weight:600; margin-top:6px; color:var(--ink);}
+  .stat-card .delta{font-size:11px; margin-top:4px; font-weight:600;}
+  .delta.up{color:var(--sage);}
+  .delta.down{color:var(--danger);}
+  .stat-card::after{
+    content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:var(--sage);
+  }
+  .stat-card.accent-soil::after{background:var(--soil);}
+  .stat-card.accent-terracotta::after{background:var(--terracotta);}
+
+  /* Panel / table */
+  .panel{background:var(--white); border:1px solid var(--line); border-radius:4px; overflow:hidden; margin-bottom:24px;}
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line);
+  }
+  .panel-head h2{font-family:var(--font-display); font-size:16px; font-weight:600;}
+  .panel-head .meta{font-size:11.5px; color:#8A8072; margin-top:2px;}
+  .filter-pills{display:flex; gap:6px;}
+  .pill{
+    font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:20px; border:1.5px solid var(--line);
+    background:var(--white); color:var(--slate); cursor:pointer;
+  }
+  .pill.active{background:var(--ink); color:var(--sand); border-color:var(--ink);}
+
+  table{width:100%; border-collapse:collapse;}
+  thead th{
+    text-align:left; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:#8A8072;
+    padding:10px 20px; border-bottom:1px solid var(--line); font-weight:600; background:var(--sand);
+  }
+  tbody td{padding:13px 20px; font-size:13.5px; border-bottom:1px solid #EFE9DA; vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FBF7EE;}
+  .name-cell{display:flex; align-items:center; gap:10px;}
+  .name-cell .mini-avatar{
+    width:28px; height:28px; border-radius:50%; background:var(--sage-light); color:var(--slate);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0;
+  }
+  .name-cell b{font-size:13px; display:block; color:var(--ink);}
+  .name-cell span{font-size:11px; color:#8A8072;}
+
+  .tag{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px;
+  }
+  .tag.nuevo{background:#E7EEFB; color:#3457A6;}
+  .tag.contactado{background:var(--sage-light); color:#4E6B44;}
+  .tag.descartado{background:#F3E4DE; color:var(--danger);}
+  .tag.caliente{background:#FCE9DD; color:var(--terracotta);}
+  .tag.congelado{background:#EAF0F7; color:#5D7A9A;}
+  .tag.seguimiento{background:#F6EEDB; color:#8A6B2E;}
+
+  .channel-badge{font-family:var(--font-mono); font-size:10.5px; color:#8A8072;}
+  .row-action{
+    font-size:11.5px; font-weight:700; color:var(--soil); cursor:pointer; padding:4px 8px; border-radius:3px;
+  }
+  .row-action:hover{background:var(--sand-deep);}
+
+  .empty-hint{padding:36px 20px; text-align:center; color:#8A8072; font-size:13px;}
+
+  /* form validation demo (Captación) */
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; padding:20px;}
+  .form-grid .field.full{grid-column:1/-1;}
+  .field.invalid input{border-color:var(--danger); background:#FDF4F1;}
+  .field .error-msg{font-size:11px; color:var(--danger); margin-top:5px; font-weight:600; display:none;}
+  .field.invalid .error-msg{display:block;}
+  .field.valid-ok input{border-color:var(--sage);}
+
+  /* Prospecto detail */
+  .split{display:grid; grid-template-columns:2fr 1fr; gap:20px;}
+  .timeline{padding:6px 20px 20px;}
+  .tl-item{display:flex; gap:14px; padding:14px 0; border-bottom:1px solid #EFE9DA;}
+  .tl-item:last-child{border-bottom:none;}
+  .tl-dot{width:9px; height:9px; border-radius:50%; background:var(--sage); margin-top:5px; flex-shrink:0;}
+  .tl-dot.reunion{background:var(--soil);}
+  .tl-dot.llamada{background:#3457A6;}
+  .tl-body b{font-size:13px; display:block;}
+  .tl-body span{font-size:11.5px; color:#8A8072;}
+  .tl-body p{font-size:12.5px; color:var(--slate); margin-top:4px; line-height:1.5;}
+
+  .state-flow{display:flex; align-items:center; gap:6px; padding:18px 20px; flex-wrap:wrap;}
+  .state-node{
+    font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:20px; border:1.5px solid var(--line); color:#8A8072;
+  }
+  .state-node.current{background:var(--ink); color:var(--sand); border-color:var(--ink);}
+  .state-node.blocked{opacity:0.35; text-decoration:line-through; border-style:dashed;}
+  .state-arrow{color:#C7BEA2; font-size:13px;}
+
+  .side-card{background:var(--white); border:1px solid var(--line); border-radius:4px; padding:18px 20px; margin-bottom:16px;}
+  .side-card h3{font-family:var(--font-display); font-size:14.5px; font-weight:600; margin-bottom:12px;}
+  .kv{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #EFE9DA; font-size:12.5px;}
+  .kv:last-child{border-bottom:none;}
+  .kv span:first-child{color:#8A8072;}
+  .kv span:last-child{font-weight:600; color:var(--ink);}
+
+  .note-box{
+    background:var(--sand-deep); border-left:3px solid var(--soil); border-radius:3px; padding:12px 14px; font-size:12px;
+    color:var(--slate); line-height:1.55; margin-top:8px;
+  }
+  .note-box b{color:var(--soil-dark);}
+
+  /* Screen switcher (dev nav) */
+  #dev-nav{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:100;
+    background:var(--ink); border-radius:30px; padding:6px; display:flex; gap:3px;
+    box-shadow:0 10px 30px -8px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1);
+  }
+  #dev-nav button{
+    background:transparent; border:none; color:#A3AE9C; font-size:11.5px; font-weight:600; padding:8px 14px;
+    border-radius:24px; cursor:pointer; font-family:var(--font-body);
+  }
+  #dev-nav button.on{background:var(--sage); color:var(--ink);}
+
+  /* ---- Reuniones ---- */
+  .meeting-card{
+    display:flex; gap:16px; padding:16px 20px; border-bottom:1px solid #EFE9DA; align-items:flex-start;
+  }
+  .meeting-card:last-child{border-bottom:none;}
+  .meeting-date{
+    width:56px; flex-shrink:0; text-align:center; background:var(--sand-deep); border-radius:4px; padding:8px 0;
+  }
+  .meeting-date .day{font-family:var(--font-display); font-size:19px; font-weight:700; color:var(--soil-dark); line-height:1;}
+  .meeting-date .mon{font-size:10px; text-transform:uppercase; color:#8A8072; letter-spacing:0.05em; margin-top:2px;}
+  .meeting-info{flex:1;}
+  .meeting-info b{font-size:13.5px; display:block;}
+  .meeting-info .meta{font-size:11.5px; color:#8A8072; margin-top:2px;}
+  .commitment-tag{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; margin-top:8px;
+    background:#FCEFD9; color:#8A6B2E; padding:4px 10px; border-radius:20px;
+  }
+  .meeting-status{font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; flex-shrink:0;}
+  .meeting-status.programada{background:#E7EEFB; color:#3457A6;}
+  .meeting-status.realizada{background:var(--sage-light); color:#4E6B44;}
+
+  /* ---- Seguimiento ---- */
+  .alert-card{
+    display:flex; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid #EFE9DA;
+  }
+  .alert-card:last-child{border-bottom:none;}
+  .alert-icon{
+    width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:15px; flex-shrink:0;
+  }
+  .alert-icon.warn{background:#FCEFD9; color:#8A6B2E;}
+  .alert-icon.cold{background:#EAF0F7; color:#5D7A9A;}
+  .alert-icon.limit{background:#F3E4DE; color:var(--danger);}
+  .alert-body{flex:1;}
+  .alert-body b{font-size:13.5px; display:block;}
+  .alert-body span{font-size:11.5px; color:#8A8072;}
+  .contact-meter{display:flex; gap:3px; align-items:center;}
+  .meter-dot{width:8px; height:8px; border-radius:50%; background:var(--line);}
+  .meter-dot.used{background:var(--terracotta);}
+  .rule-strip{
+    display:flex; gap:0; border-radius:4px; overflow:hidden; margin-bottom:20px; border:1px solid var(--line);
+  }
+  .rule-block{flex:1; padding:14px 16px; background:var(--white); border-right:1px solid var(--line);}
+  .rule-block:last-child{border-right:none;}
+  .rule-block .rd-id{font-family:var(--font-mono); font-size:10px; color:var(--soil); font-weight:700; letter-spacing:0.05em;}
+  .rule-block .rd-val{font-family:var(--font-display); font-size:20px; font-weight:600; margin-top:4px;}
+  .rule-block .rd-desc{font-size:11px; color:#8A8072; margin-top:3px; line-height:1.4;}
+
+  /* ---- Terrenos ---- */
+  .plot-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:20px;}
+  .plot-card{
+    border:1px solid var(--line); border-radius:4px; overflow:hidden; background:var(--white);
+  }
+  .plot-visual{
+    height:84px; position:relative; background:linear-gradient(135deg, var(--sage-light), var(--sand-deep));
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .plot-visual svg{position:absolute; inset:0; width:100%; height:100%; opacity:0.5;}
+  .plot-visual .plot-id{
+    font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--slate); background:rgba(255,255,255,0.85);
+    padding:3px 9px; border-radius:20px; position:relative; z-index:1;
+  }
+  .plot-body{padding:14px 16px;}
+  .plot-body .plot-title{font-family:var(--font-display); font-size:15px; font-weight:600;}
+  .plot-body .plot-meta{font-size:11.5px; color:#8A8072; margin-top:3px;}
+  .plot-foot{display:flex; align-items:center; justify-content:space-between; margin-top:12px;}
+  .plot-price{font-family:var(--font-display); font-weight:600; font-size:14.5px; color:var(--soil-dark);}
+  .avail-dot{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700;}
+  .avail-dot.disp{color:#4E6B44;}
+  .avail-dot.nodisp{color:#8A8072;}
+  .avail-dot::before{content:''; width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+  /* ---- Reportes ---- */
+  .chart-bars{display:flex; align-items:flex-end; gap:10px; height:140px; padding:16px 20px 8px;}
+  .chart-bar{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;}
+  .chart-bar .bar{width:100%; background:var(--sage); border-radius:3px 3px 0 0; position:relative;}
+  .chart-bar .bar.soil{background:var(--soil);}
+  .chart-bar .lbl{font-size:10px; color:#8A8072; font-weight:600;}
+  .funnel-row{display:flex; align-items:center; gap:10px; padding:10px 20px;}
+  .funnel-bar-bg{flex:1; height:26px; background:var(--sand); border-radius:3px; overflow:hidden; position:relative;}
+  .funnel-bar-fill{height:100%; background:linear-gradient(90deg, var(--soil), var(--sage)); display:flex; align-items:center; padding-left:10px;}
+  .funnel-bar-fill span{font-size:11px; font-weight:700; color:white;}
+  .funnel-label{width:110px; font-size:12px; font-weight:600; color:var(--slate); flex-shrink:0;}
+  .rank-row{display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid #EFE9DA;}
+  .rank-row:last-child{border-bottom:none;}
+  .rank-num{
+    width:22px; height:22px; border-radius:50%; background:var(--sand-deep); color:var(--soil-dark); font-weight:700;
+    font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .rank-row:first-child .rank-num{background:var(--soil); color:white;}
+  .rank-info{flex:1;}
+  .rank-info b{font-size:13px; display:block;}
+  .rank-info span{font-size:11px; color:#8A8072;}
+  .rank-value{font-family:var(--font-display); font-weight:600; font-size:15px;}
+
+  /* ---- Administración y Seguridad ---- */
+  .role-badge{
+    font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; text-transform:uppercase; letter-spacing:0.02em;
+  }
+  .role-badge.vendedor{background:var(--sage-light); color:#4E6B44;}
+  .role-badge.teleoperador{background:#E7EEFB; color:#3457A6;}
+  .role-badge.admin{background:#F3E4DE; color:var(--danger);}
+  .encrypt-note{display:inline-flex; align-items:center; gap:4px; font-size:10.5px; color:var(--soil); font-weight:600;}
+  .audit-row{
+    display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid #EFE9DA; font-size:12.5px;
+  }
+  .audit-row:last-child{border-bottom:none;}
+  .audit-icon{
+    width:28px; height:28px; border-radius:50%; background:var(--sand-deep); display:flex; align-items:center;
+    justify-content:center; font-size:12px; flex-shrink:0;
+  }
+  .audit-detail{flex:1;}
+  .audit-detail b{font-size:12.5px;}
+  .audit-detail span{font-size:11px; color:#8A8072; display:block; margin-top:2px;}
+  .audit-time{font-family:var(--font-mono); font-size:10.5px; color:#8A8072; flex-shrink:0;}
+  .gdpr-request{
+    display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#FDF4F1;
+    border:1px solid #EEDAD2; border-radius:4px; margin-top:4px;
+  }
+  .gdpr-request b{font-size:12.5px; color:var(--danger); display:block;}
+  .gdpr-request span{font-size:11px; color:#8A6B5E;}
+  .btn-small{
+    font-size:11px; font-weight:700; padding:6px 12px; border-radius:3px; background:var(--danger); color:white;
+    border:none; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<section id="screen-login">
+  <div class="login-card">
+    <div class="login-visual">
+      <svg viewBox="0 0 400 500" preserveAspectRatio="none">
+        <path d="M-20,120 Q100,60 200,110 T420,90" stroke="#7C9473" stroke-width="1.5" fill="none"/>
+        <path d="M-20,180 Q110,130 210,175 T420,155" stroke="#7C9473" stroke-width="1.5" fill="none"/>
+        <path d="M-20,240 Q120,195 220,235 T420,215" stroke="#7C9473" stroke-width="1.2" fill="none"/>
+        <path d="M-20,300 Q100,260 210,295 T420,280" stroke="#7C9473" stroke-width="1" fill="none"/>
+        <path d="M-20,360 Q130,325 230,355 T420,345" stroke="#7C9473" stroke-width="0.8" fill="none"/>
+      </svg>
+      <div class="brand-eyebrow">Proyecta Innova TR SAC</div>
+      <h1>Cada parcela cuenta una historia de inversión.</h1>
+      <p>CRM especializado en gestión de venta de terrenos — Huacho, Perú.</p>
+      <div class="plot-stat">
+        <div><b>1,000+</b><span>Leads / mes</span></div>
+        <div><b>10%</b><span>Conversión</span></div>
+        <div><b>100–1000</b><span>m² por lote</span></div>
+      </div>
+    </div>
+    <div class="login-form">
+      <div class="eyebrow">Acceso al sistema</div>
+      <h2>Inicia sesión</h2>
+      <p class="sub">Ingresa con tu cuenta asignada por el Administrador.</p>
+
+      <div class="field">
+        <label>Correo electrónico</label>
+        <input type="email" placeholder="ana.torres@proyectainnova.pe" value="ana.torres@proyectainnova.pe">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" value="••••••••••">
+      </div>
+
+      <button class="btn-primary" onclick="enterApp()" style="margin-top:22px;">Ingresar al CRM</button>
+      <div class="login-footer-note">Acceso restringido según rol (RD-10) · Datos protegidos conforme a Ley N°29733 (RD-12)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ APP SHELL ============ -->
+<section id="app-shell">
+  <aside class="sidebar">
+    <svg class="topo-bg" viewBox="0 0 230 700" preserveAspectRatio="none">
+      <path d="M-20,500 Q80,460 150,500 T280,480" stroke="#2A362E" stroke-width="1" fill="none"/>
+      <path d="M-20,560 Q90,525 160,555 T280,545" stroke="#2A362E" stroke-width="1" fill="none"/>
+      <path d="M-20,620 Q100,590 170,615 T280,605" stroke="#2A362E" stroke-width="1" fill="none"/>
+    </svg>
+    <div class="sidebar-logo">
+      <div class="mark"><svg viewBox="0 0 20 20" fill="none"><path d="M2 17L8 3L14 13L18 6" stroke="#1E2A22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div><b>Proyecta Innova</b><span>CRM · Terrenos</span></div>
+    </div>
+
+    <div class="nav-section-label">Embudo comercial</div>
+    <div class="nav-item active" data-view="captacion"><span class="dot"></span> Captación de Leads</div>
+    <div class="nav-item" data-view="calificacion"><span class="dot"></span> Calificación de Leads <span class="badge">6</span></div>
+    <div class="nav-item" data-view="prospecto"><span class="dot"></span> Gestión de Prospectos</div>
+
+    <div class="nav-section-label">Continuidad comercial</div>
+    <div class="nav-item" data-view="reuniones"><span class="dot"></span> Gestión de Reuniones</div>
+    <div class="nav-item" data-view="seguimiento"><span class="dot"></span> Seguimiento Comercial <span class="badge">4</span></div>
+
+    <div class="nav-section-label">Gobernanza</div>
+    <div class="nav-item" data-view="admin"><span class="dot"></span> Administración y Seguridad</div>
+
+    <div class="nav-section-label">Extensión MVP v2</div>
+    <div class="nav-item" data-view="terrenos"><span class="dot"></span> Gestión de Terrenos</div>
+    <div class="nav-item" data-view="reportes"><span class="dot"></span> Reportes</div>
+
+    <div class="sidebar-user">
+      <div class="avatar">AT</div>
+      <div><b>Ana Torres</b><span id="role-label">Vendedor</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ===== VIEW: CAPTACIÓN ===== -->
+    <div class="view" id="view-captacion">
+      <div class="topbar">
+        <div><div class="breadcrumb">Embudo · CU-01</div><h1>Captación de Leads</h1></div>
+        <div class="topbar-actions">
+          <div class="icon-btn"><span class="ping"></span>🔔</div>
+          <button class="btn-primary" style="margin:0;">+ Registrar lead manual</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="stat-row">
+          <div class="stat-card"><div class="label">Leads hoy</div><div class="value">34</div><div class="delta up">↑ 12% vs ayer</div></div>
+          <div class="stat-card accent-soil"><div class="label">Vía Zapier</div><div class="value">29</div><div class="delta up">Automático</div></div>
+          <div class="stat-card accent-terracotta"><div class="label">Duplicados evitados</div><div class="value">3</div><div class="delta down">RF-05</div></div>
+          <div class="stat-card"><div class="label">Canal top</div><div class="value" style="font-size:19px;">Facebook</div><div class="delta up">58% del total</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Registrar Lead manual</h2><div class="meta">Simulación de CU-01 — validación de formato en tiempo real (RD-09)</div></div>
+          </div>
+          <div class="form-grid">
+            <div class="field valid-ok">
+              <label>Nombres y Apellidos</label>
+              <input type="text" value="Marco Antonio Vega Ríos">
+            </div>
+            <div class="field invalid">
+              <label>Correo electrónico</label>
+              <input type="text" value="marco.vega[at]gmail.com">
+              <div class="error-msg">Formato inválido — falta el carácter "@" (RD-09)</div>
+            </div>
+            <div class="field valid-ok">
+              <label>Celular</label>
+              <input type="text" value="+51 987 654 321">
+            </div>
+            <div class="field">
+              <label>Canal de origen</label>
+              <select>
+                <option>Facebook Ads</option>
+                <option>Instagram</option>
+                <option>Referido</option>
+                <option>Google Ads</option>
+              </select>
+            </div>
+            <div class="field full">
+              <button class="btn-primary" style="width:fit-content;">Guardar Lead</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Últimos leads ingresados</h2><div class="meta">Fuente: integración Zapier + registro manual</div></div>
+            <div class="filter-pills">
+              <div class="pill active">Todos</div>
+              <div class="pill">Zapier</div>
+              <div class="pill">Manual</div>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Contacto</th><th>Canal</th><th>Fecha</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">LR</div><div><b>Lucía Ramírez</b><span>lucia.ramirez@gmail.com</span></div></div></td>
+                <td><span class="channel-badge">FACEBOOK_ADS</span></td>
+                <td>Hoy, 10:42 am</td>
+                <td><span class="tag nuevo">Nuevo</span></td>
+                <td><span class="row-action">Calificar →</span></td>
+              </tr>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">JP</div><div><b>Jorge Paredes</b><span>jparedes90@hotmail.com</span></div></div></td>
+                <td><span class="channel-badge">INSTAGRAM</span></td>
+                <td>Hoy, 09:15 am</td>
+                <td><span class="tag nuevo">Nuevo</span></td>
+                <td><span class="row-action">Calificar →</span></td>
+              </tr>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">CS</div><div><b>Carla Solano</b><span>930 112 456</span></div></div></td>
+                <td><span class="channel-badge">REFERIDO</span></td>
+                <td>Ayer, 6:03 pm</td>
+                <td><span class="tag contactado">Contactado</span></td>
+                <td><span class="row-action">Ver ficha →</span></td>
+              </tr>
+              <tr style="opacity:0.55;">
+                <td><div class="name-cell"><div class="mini-avatar">—</div><div><b>930 112 456</b><span>Intento de duplicado</span></div></div></td>
+                <td><span class="channel-badge">GOOGLE_ADS</span></td>
+                <td>Ayer, 4:47 pm</td>
+                <td><span class="tag descartado">Bloqueado (RF-05)</span></td>
+                <td><span class="row-action">—</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: CALIFICACIÓN ===== -->
+    <div class="view" id="view-calificacion" style="display:none;">
+      <div class="topbar">
+        <div><div class="breadcrumb">Embudo · CU-02 / CU-03 / CU-04</div><h1>Calificación de Leads</h1></div>
+        <div class="topbar-actions"><div class="icon-btn">🔔</div></div>
+      </div>
+      <div class="content">
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Bandeja de leads pendientes</h2><div class="meta">Ordenados por fecha de ingreso y urgencia</div></div>
+            <div class="filter-pills">
+              <div class="pill active">Pendientes (6)</div>
+              <div class="pill">Contactados hoy</div>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Contacto</th><th>Canal</th><th>Espera</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">LR</div><div><b>Lucía Ramírez</b><span>+51 998 221 340</span></div></div></td>
+                <td><span class="channel-badge">FACEBOOK_ADS</span></td>
+                <td>2h</td>
+                <td><span class="row-action" onclick="openCallModal()">Llamar ahora</span></td>
+              </tr>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">JP</div><div><b>Jorge Paredes</b><span>+51 977 302 118</span></div></div></td>
+                <td><span class="channel-badge">INSTAGRAM</span></td>
+                <td>3h</td>
+                <td><span class="row-action">Llamar ahora</span></td>
+              </tr>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">RM</div><div><b>Rosa Medina</b><span>+51 945 812 007</span></div></div></td>
+                <td><span class="channel-badge">FACEBOOK_ADS</span></td>
+                <td>5h</td>
+                <td><span class="row-action">Llamar ahora</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel" id="call-modal-panel">
+          <div class="panel-head">
+            <div><h2>Registrar resultado de llamada</h2><div class="meta">Lucía Ramírez · CU-03</div></div>
+          </div>
+          <div class="form-grid">
+            <div class="field full">
+              <label>Resultado de la llamada</label>
+              <select>
+                <option>Contactado — mostró interés</option>
+                <option>Contactado — sin interés</option>
+                <option>No contesta</option>
+                <option>Buzón de voz</option>
+                <option>Número inválido</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>Observaciones</label>
+              <input type="text" value="Interesada en lote de 300m², presupuesto hasta S/45,000. Pregunta por financiamiento.">
+            </div>
+          </div>
+          <div class="state-flow" style="border-top:1px solid var(--line);">
+            <span style="font-size:11.5px; color:#8A8072; font-weight:600; margin-right:6px;">Resultado →</span>
+            <div class="state-node">Lead</div>
+            <span class="state-arrow">→</span>
+            <div class="state-node current">Prospecto</div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <button class="btn-primary">Confirmar y convertir a Prospecto</button>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div class="note-box"><b>RD-05:</b> la conversión a Prospecto solo ocurre tras confirmar interés explícito en la llamada — no es automática por el solo hecho de contestar.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: PROSPECTOS ===== -->
+    <div class="view" id="view-prospecto" style="display:none;">
+      <div class="topbar">
+        <div><div class="breadcrumb">Embudo · CU-05</div><h1>Ficha de Prospecto</h1></div>
+        <div class="topbar-actions"><div class="icon-btn">🔔</div></div>
+      </div>
+      <div class="content">
+        <div class="split">
+          <div>
+            <div class="panel">
+              <div class="panel-head">
+                <div><h2>Carla Solano</h2><div class="meta">Prospecto desde el 28 jun · Asignada a Ana Torres</div></div>
+                <span class="tag seguimiento">En Seguimiento</span>
+              </div>
+              <div class="state-flow">
+                <div class="state-node">Lead</div><span class="state-arrow">→</span>
+                <div class="state-node">Prospecto</div><span class="state-arrow">→</span>
+                <div class="state-node current">Interesado</div><span class="state-arrow">→</span>
+                <div class="state-node">En Seguimiento</div>
+                <span class="state-arrow" style="margin-left:8px;">···</span>
+                <div class="state-node blocked">Reserva</div>
+                <div class="state-node blocked">Venta</div>
+              </div>
+              <div style="padding:0 20px 18px;">
+                <div class="note-box"><b>RD-06 (ajustado):</b> "Reserva" y "Venta" no forman parte del alcance del MVP v1 — permanecen visibles como referencia del ciclo completo, pero bloqueadas para esta entrega.</div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div><h2>Historial de interacciones</h2><div class="meta">Fuente única — sin registros en Excel externo (RNF-17)</div></div>
+              </div>
+              <div class="timeline">
+                <div class="tl-item">
+                  <div class="tl-dot reunion"></div>
+                  <div class="tl-body">
+                    <b>Compromiso pendiente registrado</b>
+                    <span>Hace 1 día · Vendedor: Ana Torres</span>
+                    <p>"Quiere traer a su hermano a la próxima reunión antes de decidir." Fecha estimada de seguimiento: 3 jul.</p>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <div class="tl-dot llamada"></div>
+                  <div class="tl-body">
+                    <b>Llamada de calificación — Interesado</b>
+                    <span>28 jun, 4:12 pm · Teleoperador: Marco Días</span>
+                    <p>Presupuesto ~S/45,000, interés en lote de 300m², pregunta por financiamiento.</p>
+                  </div>
+                </div>
+                <div class="tl-item">
+                  <div class="tl-dot"></div>
+                  <div class="tl-body">
+                    <b>Lead registrado</b>
+                    <span>28 jun, 2:47 pm · Canal: Referido</span>
+                    <p>Ingreso automático, sin duplicados detectados.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="side-card">
+              <h3>Datos de contacto</h3>
+              <div class="kv"><span>Correo</span><span>carla.solano@gmail.com</span></div>
+              <div class="kv"><span>Celular</span><span>930 112 456</span></div>
+              <div class="kv"><span>Canal</span><span>Referido</span></div>
+              <div class="kv"><span>DNI</span><span>••••••92 🔒</span></div>
+            </div>
+            <div class="side-card">
+              <h3>Interés registrado</h3>
+              <div class="kv"><span>Presupuesto</span><span>S/ 45,000</span></div>
+              <div class="kv"><span>Área deseada</span><span>~300 m²</span></div>
+              <div class="kv"><span>Financiamiento</span><span>Sí, consultar</span></div>
+            </div>
+            <div class="side-card">
+              <h3>Acciones</h3>
+              <button class="btn-primary" style="width:100%; margin-top:0;">Registrar nueva reunión</button>
+              <button class="btn-primary" style="width:100%; margin-top:10px; background:var(--white); color:var(--soil); border:1.5px solid var(--soil);">Actualizar estado</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: REUNIONES ===== -->
+    <div class="view" id="view-reuniones" style="display:none;">
+      <div class="topbar">
+        <div><div class="breadcrumb">Continuidad · CU-06</div><h1>Gestión de Reuniones</h1></div>
+        <div class="topbar-actions">
+          <div class="icon-btn">🔔</div>
+          <button class="btn-primary" style="margin:0;">+ Nueva reunión</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Próximas reuniones</h2><div class="meta">Programadas por Ana Torres</div></div>
+            <div class="filter-pills">
+              <div class="pill active">Todas</div>
+              <div class="pill">Programadas</div>
+              <div class="pill">Realizadas</div>
+            </div>
+          </div>
+          <div>
+            <div class="meeting-card">
+              <div class="meeting-date"><div class="day">03</div><div class="mon">Jul</div></div>
+              <div class="meeting-info">
+                <b>Carla Solano — Reunión de seguimiento</b>
+                <div class="meta">Modalidad virtual · 4:00 pm</div>
+                <div class="commitment-tag">📌 Compromiso: traer a su hermano antes de decidir</div>
+              </div>
+              <span class="meeting-status programada">Programada</span>
+            </div>
+            <div class="meeting-card">
+              <div class="meeting-date"><div class="day">28</div><div class="mon">Jun</div></div>
+              <div class="meeting-info">
+                <b>Jorge Paredes — Presentación de proyecto</b>
+                <div class="meta">Modalidad presencial · Oficina Huacho</div>
+              </div>
+              <span class="meeting-status realizada">Realizada</span>
+            </div>
+            <div class="meeting-card">
+              <div class="meeting-date"><div class="day">30</div><div class="mon">Jun</div></div>
+              <div class="meeting-info">
+                <b>Rosa Medina — Primera reunión informativa</b>
+                <div class="meta">Modalidad virtual · 11:00 am</div>
+                <div class="commitment-tag">📌 Compromiso: quiere pensarlo, requiere visita previa</div>
+              </div>
+              <span class="meeting-status programada">Programada</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Registrar resultado y compromiso pendiente</h2><div class="meta">Carla Solano · CU-06</div></div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Resultado de la reunión</label>
+              <select><option>Realizada</option><option>No asistió</option></select>
+            </div>
+            <div class="field">
+              <label>Fecha estimada de seguimiento</label>
+              <input type="text" value="03 jul 2026">
+            </div>
+            <div class="field full">
+              <label>Compromiso pendiente acordado</label>
+              <input type="text" value="Cliente quiere traer a su hermano a la próxima reunión antes de decidir.">
+            </div>
+            <div class="field full">
+              <button class="btn-primary" style="width:fit-content;">Guardar compromiso</button>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div class="note-box"><b>RD-07:</b> todo acuerdo verbal relevante queda registrado como compromiso pendiente asociado al prospecto, con fecha de vencimiento — evita que dependa de la memoria del vendedor. Este registro alimenta directamente las alertas de Seguimiento Comercial.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: SEGUIMIENTO ===== -->
+    <div class="view" id="view-seguimiento" style="display:none;">
+      <div class="topbar">
+        <div><div class="breadcrumb">Continuidad · CU-08</div><h1>Seguimiento Comercial</h1></div>
+        <div class="topbar-actions"><div class="icon-btn"><span class="ping"></span>🔔</div></div>
+      </div>
+      <div class="content">
+        <div class="rule-strip">
+          <div class="rule-block">
+            <div class="rd-id">RD-04</div>
+            <div class="rd-val">3 días</div>
+            <div class="rd-desc">Sin respuesta → genera alerta al vendedor</div>
+          </div>
+          <div class="rule-block">
+            <div class="rd-id">RD-02</div>
+            <div class="rd-val">5 días</div>
+            <div class="rd-desc">Sin respuesta → pasa automáticamente a Congeladora</div>
+          </div>
+          <div class="rule-block">
+            <div class="rd-id">RD-03</div>
+            <div class="rd-val">2 / semana</div>
+            <div class="rd-desc">Máximo de intentos de contacto por canal</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Bandeja de alertas</h2><div class="meta">Generadas automáticamente por el proceso diario</div></div>
+            <div class="filter-pills">
+              <div class="pill active">Todas (4)</div>
+              <div class="pill">Por vencer (3d)</div>
+              <div class="pill">Congelados (5d)</div>
+            </div>
+          </div>
+          <div>
+            <div class="alert-card">
+              <div class="alert-icon warn">⏰</div>
+              <div class="alert-body">
+                <b>Rosa Medina — 3 días sin respuesta</b>
+                <span>Última interacción: reunión informativa del 30 jun</span>
+              </div>
+              <span class="tag seguimiento">Alerta activa</span>
+            </div>
+            <div class="alert-card">
+              <div class="alert-icon cold">🧊</div>
+              <div class="alert-body">
+                <b>Diego Huamán — movido a Congeladora</b>
+                <span>5 días sin respuesta · Recontactar en 2 semanas</span>
+              </div>
+              <span class="tag congelado">Congelado</span>
+            </div>
+            <div class="alert-card">
+              <div class="alert-icon limit">🚫</div>
+              <div class="alert-body">
+                <b>Jorge Paredes — límite de contacto alcanzado</b>
+                <span>2 intentos esta semana por WhatsApp · Próximo intento habilitado: lunes</span>
+              </div>
+              <div class="contact-meter">
+                <span class="meter-dot used"></span><span class="meter-dot used"></span>
+              </div>
+            </div>
+            <div class="alert-card">
+              <div class="alert-icon warn">⏰</div>
+              <div class="alert-body">
+                <b>Luis Fernández — 3 días sin respuesta</b>
+                <span>Última interacción: llamada de calificación</span>
+              </div>
+              <span class="tag seguimiento">Alerta activa</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Reactivar contacto — Rosa Medina</h2><div class="meta">Valida límite de intentos antes de habilitar la acción</div></div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Canal de contacto</label>
+              <select><option>Llamada telefónica</option><option>WhatsApp</option></select>
+            </div>
+            <div class="field">
+              <label>Intentos esta semana</label>
+              <input type="text" value="0 / 2 — habilitado" disabled style="background:var(--sage-light); color:#4E6B44; font-weight:600;">
+            </div>
+            <div class="field full">
+              <button class="btn-primary" style="width:fit-content;">Registrar intento de contacto</button>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div class="note-box"><b>RD-03:</b> los umbrales de 3, 5 días y 2 intentos/semana son parametrizables por el Administrador — no están fijos en el código, conforme a lo indicado por la Gerencia ("no hay una regla escrita, en la práctica...").</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: ADMINISTRACIÓN Y SEGURIDAD ===== -->
+    <div class="view" id="view-admin" style="display:none;">
+      <div class="topbar">
+        <div><div class="breadcrumb">Gobernanza · CU-12</div><h1>Administración y Seguridad</h1></div>
+        <div class="topbar-actions">
+          <div class="icon-btn">🔔</div>
+          <button class="btn-primary" style="margin:0;">+ Crear usuario</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Usuarios del sistema</h2><div class="meta">Correo y teléfono almacenados cifrados (RD-12)</div></div>
+          </div>
+          <table>
+            <thead><tr><th>Usuario</th><th>Rol</th><th>Contacto</th><th>Cartera</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">AT</div><div><b>Ana Torres</b><span>Activa desde ene 2026</span></div></div></td>
+                <td><span class="role-badge vendedor">Vendedor</span></td>
+                <td><span class="encrypt-note">🔒 a.torres@proyectainnova.pe</span></td>
+                <td>18 clientes asignados</td>
+                <td><span class="row-action">Editar</span></td>
+              </tr>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">MD</div><div><b>Marco Días</b><span>Activo desde mar 2026</span></div></div></td>
+                <td><span class="role-badge teleoperador">Teleoperador</span></td>
+                <td><span class="encrypt-note">🔒 m.dias@proyectainnova.pe</span></td>
+                <td>— (sin cartera propia)</td>
+                <td><span class="row-action">Editar</span></td>
+              </tr>
+              <tr>
+                <td><div class="name-cell"><div class="mini-avatar">RC</div><div><b>Roberto Cadenas</b><span>Administrador general</span></div></div></td>
+                <td><span class="role-badge admin">Administrador</span></td>
+                <td><span class="encrypt-note">🔒 r.cadenas@proyectainnova.pe</span></td>
+                <td>Acceso total</td>
+                <td><span class="row-action">Editar</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Crear / Editar usuario</h2><div class="meta">Validación de formato en tiempo real (RD-09)</div></div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Nombres y Apellidos</label>
+              <input type="text" value="Luis Fernández Quiroz">
+            </div>
+            <div class="field">
+              <label>Rol asignado</label>
+              <select><option>Vendedor</option><option>Teleoperador</option><option>Administrador</option></select>
+            </div>
+            <div class="field valid-ok">
+              <label>Correo electrónico</label>
+              <input type="text" value="luis.fernandez@proyectainnova.pe">
+              <div class="field-hint">🔒 Se almacenará cifrado en reposo (RD-12)</div>
+            </div>
+            <div class="field invalid">
+              <label>Teléfono</label>
+              <input type="text" value="987-abc-321">
+              <div class="error-msg">Solo se permiten dígitos numéricos (RD-09)</div>
+            </div>
+            <div class="field full">
+              <button class="btn-primary" style="width:fit-content;">Guardar usuario</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>Log de auditoría</h2><div class="meta">Reasignación de cartera (RD-11)</div></div>
+            </div>
+            <div>
+              <div class="audit-row">
+                <div class="audit-icon">👤</div>
+                <div class="audit-detail">
+                  <b>Cliente "Jorge Paredes" reasignado</b>
+                  <span>De: Marco Días → A: Ana Torres · Ejecutado por: Roberto Cadenas</span>
+                </div>
+                <div class="audit-time">Hoy, 09:12</div>
+              </div>
+              <div class="audit-row">
+                <div class="audit-icon">✏️</div>
+                <div class="audit-detail">
+                  <b>Usuario "Luis Fernández" editado</b>
+                  <span>Campo modificado: teléfono · Ejecutado por: Roberto Cadenas</span>
+                </div>
+                <div class="audit-time">Ayer, 16:40</div>
+              </div>
+              <div class="audit-row">
+                <div class="audit-icon">🗑️</div>
+                <div class="audit-detail">
+                  <b>Registro de lead eliminado</b>
+                  <span>Lead duplicado (RF-05) · Ejecutado por: sistema (automático)</span>
+                </div>
+                <div class="audit-time">Ayer, 14:02</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="side-card">
+              <h3>Solicitudes de eliminación de datos</h3>
+              <div class="gdpr-request">
+                <div>
+                  <b>Carla Solano</b>
+                  <span>Solicitó el 01 jul · Plazo: 10 jul (RD-12)</span>
+                </div>
+                <button class="btn-small">Procesar</button>
+              </div>
+              <div class="note-box" style="margin-top:12px;">
+                <b>RD-12:</b> toda solicitud de eliminación de datos personales debe atenderse en un plazo máximo de 10 días hábiles, conforme a la Ley N°29733.
+              </div>
+            </div>
+            <div class="side-card">
+              <h3>Control de acceso por rol</h3>
+              <div class="kv"><span>Vendedor</span><span>Solo su cartera</span></div>
+              <div class="kv"><span>Teleoperador</span><span>Bandeja de leads</span></div>
+              <div class="kv"><span>Administrador</span><span>Acceso total</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: TERRENOS ===== -->
+    <div class="view" id="view-terrenos" style="display:none;">
+      <div class="topbar">
+        <div><div class="breadcrumb">Extensión MVP v2 · CU-09</div><h1>Gestión de Terrenos</h1></div>
+        <div class="topbar-actions"><div class="icon-btn">🔔</div></div>
+      </div>
+      <div class="content">
+        <div class="stat-row">
+          <div class="stat-card"><div class="label">Lotes totales</div><div class="value">48</div><div class="delta up">Condominio Bosque Alto</div></div>
+          <div class="stat-card accent-soil"><div class="label">Disponibles</div><div class="value">31</div><div class="delta up">RF-25 · tiempo real</div></div>
+          <div class="stat-card accent-terracotta"><div class="label">No disponibles (admin.)</div><div class="value">17</div><div class="delta down">Retirados del catálogo</div></div>
+          <div class="stat-card"><div class="label">Área promedio</div><div class="value">420 m²</div><div class="delta up">Rango 100–1000 m²</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Inventario de lotes — Huacho</h2><div class="meta">Condominio Campestre Bosque Alto</div></div>
+            <div class="filter-pills">
+              <div class="pill active">Todos</div>
+              <div class="pill">Disponibles</div>
+              <div class="pill">No disponibles</div>
+            </div>
+          </div>
+          <div class="plot-grid">
+            <div class="plot-card">
+              <div class="plot-visual">
+                <svg viewBox="0 0 300 84"><path d="M0,50 Q80,20 150,45 T300,30" stroke="#7C9473" stroke-width="1.2" fill="none"/><path d="M0,65 Q90,40 160,60 T300,50" stroke="#7C9473" stroke-width="1" fill="none"/></svg>
+                <span class="plot-id">LOTE-014</span>
+              </div>
+              <div class="plot-body">
+                <div class="plot-title">300 m²</div>
+                <div class="plot-meta">Manzana C · Vista al valle</div>
+                <div class="plot-foot">
+                  <span class="plot-price">S/ 42,000</span>
+                  <span class="avail-dot disp">Disponible</span>
+                </div>
+              </div>
+            </div>
+            <div class="plot-card">
+              <div class="plot-visual">
+                <svg viewBox="0 0 300 84"><path d="M0,45 Q80,25 150,40 T300,25" stroke="#7C9473" stroke-width="1.2" fill="none"/></svg>
+                <span class="plot-id">LOTE-021</span>
+              </div>
+              <div class="plot-body">
+                <div class="plot-title">500 m²</div>
+                <div class="plot-meta">Manzana A · Esquinero</div>
+                <div class="plot-foot">
+                  <span class="plot-price">S/ 68,500</span>
+                  <span class="avail-dot disp">Disponible</span>
+                </div>
+              </div>
+            </div>
+            <div class="plot-card" style="opacity:0.55;">
+              <div class="plot-visual">
+                <svg viewBox="0 0 300 84"><path d="M0,55 Q80,30 150,50 T300,35" stroke="#7C9473" stroke-width="1.2" fill="none"/></svg>
+                <span class="plot-id">LOTE-009</span>
+              </div>
+              <div class="plot-body">
+                <div class="plot-title">250 m²</div>
+                <div class="plot-meta">Manzana B · Retirado del catálogo</div>
+                <div class="plot-foot">
+                  <span class="plot-price">S/ 33,000</span>
+                  <span class="avail-dot nodisp">No disponible</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div class="note-box"><b>RD-08 (ajustado):</b> el sistema gestiona únicamente "Disponible" / "No disponible administrativo". Los estados "Reservado" y "Vendido" no forman parte de esta fase de desarrollo (dependen de módulos de Visitas y Ventas, fuera de alcance).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== VIEW: REPORTES ===== -->
+    <div class="view" id="view-reportes" style="display:none;">
+      <div class="topbar">
+        <div><div class="breadcrumb">Extensión MVP v2 · CU-13</div><h1>Reportes</h1></div>
+        <div class="topbar-actions"><div class="icon-btn">🔔</div></div>
+      </div>
+      <div class="content">
+        <div class="stat-row">
+          <div class="stat-card"><div class="label">Leads (mes)</div><div class="value">1,000</div><div class="delta up">RF-36</div></div>
+          <div class="stat-card accent-soil"><div class="label">Prospectos</div><div class="value">100</div><div class="delta up">10% del total</div></div>
+          <div class="stat-card accent-terracotta"><div class="label">En Seguimiento</div><div class="value">30</div><div class="delta down">RF-37</div></div>
+          <div class="stat-card"><div class="label">Tasa de conversión</div><div class="value">10%</div><div class="delta up">Calculada automáticamente</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Leads captados por semana</h2><div class="meta">Junio 2026</div></div>
+          </div>
+          <div class="chart-bars">
+            <div class="chart-bar"><div class="bar" style="height:60px;"></div><div class="lbl">Sem 1</div></div>
+            <div class="chart-bar"><div class="bar" style="height:82px;"></div><div class="lbl">Sem 2</div></div>
+            <div class="chart-bar"><div class="bar soil" style="height:110px;"></div><div class="lbl">Sem 3</div></div>
+            <div class="chart-bar"><div class="bar" style="height:95px;"></div><div class="lbl">Sem 4</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Embudo de conversión</h2><div class="meta">Lead → Prospecto → Interesado → En Seguimiento</div></div>
+          </div>
+          <div style="padding:14px 0;">
+            <div class="funnel-row"><span class="funnel-label">Leads</span><div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:100%;"><span>1,000</span></div></div></div>
+            <div class="funnel-row"><span class="funnel-label">Prospectos</span><div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:38%;"><span>100</span></div></div></div>
+            <div class="funnel-row"><span class="funnel-label">Interesados</span><div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:22%;"><span>58</span></div></div></div>
+            <div class="funnel-row"><span class="funnel-label">En Seguimiento</span><div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:12%;"><span>30</span></div></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Ranking de vendedores</h2><div class="meta">RF-38 · Junio 2026</div></div>
+          </div>
+          <div>
+            <div class="rank-row">
+              <div class="rank-num">1</div>
+              <div class="rank-info"><b>Ana Torres</b><span>18 prospectos gestionados</span></div>
+              <div class="rank-value">S/ 210,400</div>
+            </div>
+            <div class="rank-row">
+              <div class="rank-num">2</div>
+              <div class="rank-info"><b>Luis Fernández</b><span>14 prospectos gestionados</span></div>
+              <div class="rank-value">S/ 168,900</div>
+            </div>
+            <div class="rank-row">
+              <div class="rank-num">3</div>
+              <div class="rank-info"><b>Marco Días</b><span>9 prospectos gestionados</span></div>
+              <div class="rank-value">S/ 97,200</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</section>
+
+<!-- Dev nav — solo para navegación del mockup, no forma parte del producto -->
+<div id="dev-nav" style="display:none;">
+  <button class="on" onclick="showView('captacion', this)">Captación</button>
+  <button onclick="showView('calificacion', this)">Calificación</button>
+  <button onclick="showView('prospecto', this)">Prospecto</button>
+  <button onclick="showView('reuniones', this)">Reuniones</button>
+  <button onclick="showView('seguimiento', this)">Seguimiento</button>
+  <button onclick="showView('terrenos', this)">Terrenos</button>
+  <button onclick="showView('reportes', this)">Reportes</button>
+  <button onclick="showView('admin', this)">Admin</button>
+</div>
+
+<script>
+  function enterApp(){
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('app-shell').classList.add('visible');
+    document.getElementById('dev-nav').style.display = 'flex';
+  }
+  function showView(name, btn){
+    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+    document.getElementById('view-' + name).style.display = 'block';
+    document.querySelectorAll('#dev-nav button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    document.querySelectorAll('.nav-item[data-view]').forEach(n => n.classList.remove('active'));
+    const navItem = document.querySelector('.nav-item[data-view="'+name+'"]');
+    if(navItem) navItem.classList.add('active');
+  }
+  document.querySelectorAll('.nav-item[data-view]').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      const name = item.dataset.view;
+      showView(name, document.querySelector('#dev-nav button:nth-child(' + (['captacion','calificacion','prospecto','reuniones','seguimiento','terrenos','reportes','admin'].indexOf(name)+1) + ')'));
+    });
+  });
+</script>
+
+</body>
+</html>

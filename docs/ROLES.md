@@ -1,86 +1,71 @@
-# Gestión de Roles
+# Gestión de Roles — CRM de Terrenos (guía definitiva)
 
-El sistema cuenta con tres roles de usuario, cada uno con permisos específicos
-para acceder a los módulos del CRM según sus responsabilidades dentro del
-proceso comercial. El control se aplica en tres capas:
+Sistema basado en el mockup `docs/HTML GUIA DEFINITIVA.html`, con la paleta
+azul del proyecto. El control de acceso se aplica en tres capas:
 
-1. **Menú lateral** — cada rol solo ve sus pestañas (`src/lib/nav-items.ts`).
-2. **Rutas** — el proxy redirige a Inicio si se entra por URL directa a una
-   pestaña no permitida (`src/proxy.ts`).
-3. **Base de datos (RLS)** — las políticas de Supabase garantizan la
-   restricción aunque se salte la UI (`supabase/schema.sql`).
+1. **Menú lateral** — cada rol solo ve sus pantallas (`src/lib/nav-items.ts`).
+2. **Rutas** — el proxy redirige si se entra por URL directa (`src/proxy.ts`).
+3. **Base de datos (RLS)** — políticas de Supabase (`supabase/schema_v2.sql`).
 
 ---
 
-## Rol: Teleoperador
+## 🔵 Teleoperador
 
-Responsable de la captación y calificación inicial de los leads hasta
-convertirlos en prospectos.
+Captación y calificación inicial de leads hasta convertirlos en prospectos.
 
-**Pestañas disponibles:**
+- **Captación de Leads (CU-01)**: registro manual con validación en tiempo
+  real (RD-09) y bloqueo de duplicados (RF-05, auditado).
+- **Calificación de Leads (CU-02/03/04)**: bandeja de pendientes, registro
+  del resultado de llamadas y conversión a Prospecto **solo tras interés
+  explícito** (RD-05), eligiendo el vendedor asignado.
 
-- **Inicio (Dashboard)**: indicadores relacionados con los leads.
-- **Leads**:
-  - Registrar y consultar leads (botón "Nuevo Lead" del topbar).
-  - Registrar el resultado de llamadas (menú de acciones → Registrar llamada).
-  - Convertir un lead en prospecto (menú de acciones → Convertir a prospecto):
-    crea el contacto, el teleoperador elige el vendedor asignado y el lead
-    queda en estado **Prospecto** con la marca "Convertido".
+> **RD-05:** su acceso sobre el registro termina en la conversión: el
+> prospecto pasa a la cartera del vendedor y desaparece de su bandeja
+> (bloqueado también por RLS).
 
----
+## 🟢 Vendedor
 
-## Rol: Vendedor
+Gestión comercial de su propia cartera (RD-10).
 
-Responsable de la gestión comercial de los prospectos asignados, la
-coordinación de reuniones y el seguimiento hasta el cierre.
+- **Gestión de Prospectos (CU-05)**: solo sus asignados; ficha con estados
+  (Reserva/Venta bloqueados por RD-06), historial e interés registrado.
+- **Gestión de Reuniones (CU-06)**: programa reuniones de sus prospectos y
+  registra resultado + compromiso pendiente con vencimiento (RD-07).
+- **Seguimiento Comercial (CU-08)**: solo sus alertas — 3 días sin respuesta
+  → alerta (RD-04); 5 días → Congeladora automática (RD-02); máx. 2 intentos
+  de contacto por semana, el botón se bloquea al llegar al límite (RD-03).
+- **Gestión de Terrenos (CU-09)**: consulta de disponibilidad en tiempo real
+  y asociación de lotes a sus prospectos.
 
-**Pestañas disponibles:**
+> Cero acceso a Reportes y Administración.
 
-- **Inicio (Dashboard)**: indicadores de su gestión comercial.
-- **Contactos**:
-  - Gestionar sus prospectos asignados.
-  - Consultar el historial de interacciones (llamadas, reuniones, notas).
-  - Actualizar el estado del prospecto.
-  - Registrar observaciones e intereses (notas).
-- **Calendario**:
-  - Programar, reprogramar y cancelar reuniones.
-  - Registrar el resultado de las reuniones (minuta + confirmación de datos
-    del contacto).
-- **Recordatorios**: consultar alertas automáticas (incluye la campana del
-  topbar, exclusiva de este rol).
+## 🔴 Administrador
 
-> **Restricción:** el vendedor solo visualiza y gestiona los prospectos que
-> tiene asignados (`contacts.assigned_to`), tanto en la interfaz como a nivel
-> de base de datos (RLS).
+Acceso total e irrestricto a las 8 pantallas, con vista global de todas las
+carteras y alertas.
 
----
-
-## Rol: Administrador
-
-Responsable de la administración del sistema, la gestión de usuarios y la
-supervisión general de la operación comercial.
-
-**Pestañas disponibles:**
-
-- **Inicio (Dashboard)**: indicadores generales del sistema.
-- **Contactos**: consulta todos los prospectos y su historial.
-- **Calendario**: consulta la programación de reuniones (solo lectura).
-- **Empleados / Usuarios**: crear y editar usuarios, administrar roles y
-  permisos, inhabilitar cuentas.
-
-> Nota: por decisión del equipo (jul 2026), el administrador **no** ve la
-> pestaña Leads ni Recordatorios, a diferencia de la versión inicial del
-> documento de roles.
+- **Administración y Seguridad (CU-12)**: crear/editar/inhabilitar usuarios,
+  log de auditoría (RD-11), solicitudes de eliminación de datos en máximo
+  10 días hábiles (RD-12, Ley N°29733) y umbrales parametrizables de
+  seguimiento (RD-02/03/04).
+- **Reportes (CU-13)**: KPIs, leads por semana, embudo de conversión y
+  ranking de vendedores (RF-36/37/38).
+- En Reuniones y Terrenos opera en modo consulta/gestión global.
 
 ---
 
 ## Matriz de Accesos
 
-| Pestaña | Teleoperador | Vendedor | Administrador |
-|---------|:------------:|:--------:|:-------------:|
-| Inicio (Dashboard) | ✅ | ✅ | ✅ |
-| Leads | ✅ | ❌ | ❌ |
-| Contactos | ❌ | ✅ (solo asignados) | ✅ |
-| Calendario | ❌ | ✅ | ✅ (solo consulta) |
-| Recordatorios | ❌ | ✅ | ❌ |
-| Empleados / Usuarios | ❌ | ❌ | ✅ |
+| Pantalla | Teleoperador | Vendedor | Administrador |
+|----------|:------------:|:--------:|:-------------:|
+| Captación de Leads | ✅ | ❌ | ✅ |
+| Calificación de Leads | ✅ | ❌ | ✅ |
+| Gestión de Prospectos | ❌ | ✅ (solo su cartera) | ✅ (global) |
+| Gestión de Reuniones | ❌ | ✅ (sus prospectos) | ✅ (consulta) |
+| Seguimiento Comercial | ❌ | ✅ (sus alertas) | ✅ (global) |
+| Gestión de Terrenos | ❌ | ✅ (consulta + asociar) | ✅ (gestión) |
+| Reportes | ❌ | ❌ | ✅ |
+| Administración y Seguridad | ❌ | ❌ | ✅ |
+
+`/` redirige a la primera pantalla de cada rol (teleoperador/admin →
+Captación; vendedor → Prospectos).

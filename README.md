@@ -1,8 +1,8 @@
-# CRM Proyecta Innova
+# CRM Proyecta Innova — Venta de Terrenos
 
-CRM interno construido con **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS 4** y **Supabase** (autenticación + base de datos Postgres).
+CRM especializado en gestión de venta de terrenos (Huacho, Perú), construido con **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS 4** y **Supabase** (autenticación + base de datos Postgres). La interfaz sigue la guía definitiva (`docs/HTML GUIA DEFINITIVA.html`) con la paleta azul del proyecto.
 
-Incluye pantallas de Dashboard, Leads, Contactos, Ventas, Calendario, Recordatorios, Reportes y Gestión de Usuarios, protegidas por login con Supabase Auth.
+**8 pantallas** gobernadas por rol (ver [`docs/ROLES.md`](docs/ROLES.md)): Captación de Leads, Calificación de Leads, Gestión de Prospectos, Gestión de Reuniones, Seguimiento Comercial, Gestión de Terrenos, Reportes y Administración y Seguridad.
 
 ---
 
@@ -42,9 +42,10 @@ cp .env.example .env.local
 
 Si el equipo ya tiene el proyecto de Supabase configurado, salta este paso.
 
-1. Entra a **Supabase Dashboard → SQL Editor**
-2. Copia todo el contenido de [`supabase/schema.sql`](supabase/schema.sql)
-3. Pégalo y ejecuta **Run**
+Ejecuta en **Supabase Dashboard → SQL Editor**, en este orden:
+
+1. [`supabase/schema.sql`](supabase/schema.sql) — perfiles, roles y permisos base
+2. [`supabase/schema_v2.sql`](supabase/schema_v2.sql) — dominio del CRM de terrenos (leads, prospectos, reuniones, seguimiento, lotes, auditoría, Ley 29733) con sus políticas RLS
 
 Esto crea:
 - Enums de la app (roles, estados de leads/deals, etc.)

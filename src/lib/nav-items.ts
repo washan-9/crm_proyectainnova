@@ -3,64 +3,77 @@ export type AppRole = "administrador" | "teleoperador" | "vendedor";
 export type NavItem = {
   href: string;
   label: string;
-  icon: string;
-  /** Roles que pueden ver esta pestaña */
+  section: string;
+  /** Roles que pueden ver esta pantalla (matriz de la guía definitiva) */
   roles: AppRole[];
 };
 
-// Matriz de accesos (ver docs/ROLES.md):
-//   Inicio        → todos
-//   Leads         → teleoperador
-//   Contactos     → vendedor, administrador
-//   Calendario    → vendedor, administrador
-//   Recordatorios → vendedor
-//   Usuarios      → administrador
+// Matriz de accesos (docs/ROLES.md):
+//   Teleoperador  → Captación, Calificación
+//   Vendedor      → Prospectos, Reuniones, Seguimiento, Terrenos (consulta)
+//   Administrador → acceso total a las 8 pantallas
 export const navItems: NavItem[] = [
   {
-    href: "/",
-    label: "Inicio",
-    icon: "dashboard",
-    roles: ["administrador", "teleoperador", "vendedor"],
+    href: "/captacion",
+    label: "Captación de Leads",
+    section: "Embudo comercial",
+    roles: ["teleoperador", "administrador"],
   },
   {
-    href: "/leads",
-    label: "Leads",
-    icon: "person_search",
-    roles: ["teleoperador"],
+    href: "/calificacion",
+    label: "Calificación de Leads",
+    section: "Embudo comercial",
+    roles: ["teleoperador", "administrador"],
   },
   {
-    href: "/contactos",
-    label: "Contactos",
-    icon: "contacts",
+    href: "/prospectos",
+    label: "Gestión de Prospectos",
+    section: "Embudo comercial",
     roles: ["vendedor", "administrador"],
   },
   {
-    href: "/calendario",
-    label: "Calendario",
-    icon: "calendar_month",
+    href: "/reuniones",
+    label: "Gestión de Reuniones",
+    section: "Continuidad comercial",
     roles: ["vendedor", "administrador"],
   },
   {
-    href: "/recordatorios",
-    label: "Recordatorios",
-    icon: "notifications",
-    roles: ["vendedor"],
+    href: "/seguimiento",
+    label: "Seguimiento Comercial",
+    section: "Continuidad comercial",
+    roles: ["vendedor", "administrador"],
   },
   {
-    href: "/usuarios",
-    label: "Empleados / Usuarios",
-    icon: "group",
+    href: "/admin",
+    label: "Administración y Seguridad",
+    section: "Gobernanza",
+    roles: ["administrador"],
+  },
+  {
+    href: "/terrenos",
+    label: "Gestión de Terrenos",
+    section: "Extensión MVP v2",
+    roles: ["vendedor", "administrador"],
+  },
+  {
+    href: "/reportes",
+    label: "Reportes",
+    section: "Extensión MVP v2",
     roles: ["administrador"],
   },
 ];
 
-/** ¿Puede este rol entrar a esta ruta? (para el proxy y los guards) */
+/** Primera pantalla de cada rol (destino de "/") */
+export function homeFor(role: AppRole): string {
+  if (role === "vendedor") return "/prospectos";
+  return "/captacion";
+}
+
+/** ¿Puede este rol entrar a esta ruta? (proxy + guards) */
 export function canAccess(pathname: string, role: AppRole | null): boolean {
-  const item = navItems.find((i) =>
-    i.href === "/" ? pathname === "/" : pathname.startsWith(i.href),
-  );
-  // Rutas fuera del menú (ej. /ventas) no se restringen aquí
-  if (!item) return true;
+  if (pathname === "/") return true; // redirige por rol en la página
+  const item = navItems.find((i) => pathname.startsWith(i.href));
+  if (!item) return true; // rutas fuera del menú no se restringen aquí
   if (!role) return false;
   return item.roles.includes(role);
 }
