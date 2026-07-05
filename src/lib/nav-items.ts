@@ -11,5 +11,4 @@ export const navItems: NavItem[] = [
   { href: "/calendario", label: "Calendario", icon: "calendar_month" },
   { href: "/recordatorios", label: "Recordatorios", icon: "notifications" },
   { href: "/usuarios", label: "Empleados / Usuarios", icon: "group" },
-  { href: "/reportes", label: "Reportes", icon: "bar_chart" },
 ];

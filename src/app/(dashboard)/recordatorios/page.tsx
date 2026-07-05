@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type DbCategory = "leads" | "tareas" | "otros";
-type CategoryFilter = "all" | "unread" | DbCategory;
 
 type Notification = {
   id: string;
@@ -28,13 +27,6 @@ const categoryIconStyles: Record<DbCategory, string> = {
   tareas: "bg-[#1e40af]/10 text-[#00288e]",
   otros: "bg-[#e0e3e5] text-[#323537]",
 };
-
-const categoryList: { key: CategoryFilter; label: string; icon: string }[] = [
-  { key: "all", label: "Todas las Notificaciones", icon: "list" },
-  { key: "unread", label: "No Leídas", icon: "mark_email_unread" },
-  { key: "leads", label: "Leads", icon: "person_add" },
-  { key: "tareas", label: "Tareas", icon: "task_alt" },
-];
 
 function dayLabel(iso: string) {
   const date = new Date(iso);
@@ -67,7 +59,6 @@ function timeLabel(iso: string) {
 export default function RecordatoriosPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
   const [toast, setToast] = useState(false);
 
   useEffect(() => {
@@ -84,25 +75,13 @@ export default function RecordatoriosPage() {
       });
   }, []);
 
-  const counts = useMemo(
-    () => ({
-      all: notifications.length,
-      unread: notifications.filter((n) => !n.read).length,
-      leads: notifications.filter((n) => n.category === "leads").length,
-      tareas: notifications.filter((n) => n.category === "tareas").length,
-      otros: notifications.filter((n) => n.category === "otros").length,
-    }),
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
     [notifications],
   );
 
-  const filtered = notifications.filter((n) => {
-    if (activeCategory === "all") return true;
-    if (activeCategory === "unread") return !n.read;
-    return n.category === activeCategory;
-  });
-
   const grouped: Record<string, Notification[]> = {};
-  filtered.forEach((n) => {
+  notifications.forEach((n) => {
     const day = dayLabel(n.created_at);
     grouped[day] = grouped[day] ?? [];
     grouped[day].push(n);
@@ -124,14 +103,6 @@ export default function RecordatoriosPage() {
     await supabase.from("notifications").update({ read: true }).eq("id", id);
   }
 
-  const readPercent =
-    notifications.length === 0
-      ? 100
-      : Math.round(
-          ((notifications.length - counts.unread) / notifications.length) *
-            100,
-        );
-
   return (
     <>
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -150,6 +121,11 @@ export default function RecordatoriosPage() {
           </h2>
           <p className="mt-1 text-base text-[#757684]">
             Mantente al día con tus leads, tareas y actividades.
+            {unreadCount > 0 && (
+              <span className="ml-2 rounded-full bg-[#00288e] px-2 py-0.5 text-xs font-bold text-white">
+                {unreadCount} sin leer
+              </span>
+            )}
           </p>
         </div>
         <button
@@ -163,72 +139,13 @@ export default function RecordatoriosPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        {/* Categorías */}
-        <div className="col-span-12 lg:col-span-3">
-          <div className="sticky top-24 rounded-xl border border-[#c4c5d5] bg-white p-6">
-            <h3 className="mb-6 text-sm font-semibold text-[#0b1c30]">
-              Categorías
-            </h3>
-            <div className="space-y-1">
-              {categoryList.map((cat) => (
-                <button
-                  key={cat.key}
-                  onClick={() => setActiveCategory(cat.key)}
-                  className={`flex w-full items-center justify-between rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                    activeCategory === cat.key
-                      ? "bg-[#00288e] text-white"
-                      : "text-[#444653] hover:bg-[#eff4ff]"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="material-symbols-outlined">
-                      {cat.icon}
-                    </span>
-                    <span>{cat.label}</span>
-                  </div>
-                  <span
-                    className={`rounded px-1.5 text-xs ${
-                      activeCategory === cat.key
-                        ? "bg-white/20"
-                        : "bg-[#dce9ff]"
-                    }`}
-                  >
-                    {counts[cat.key as keyof typeof counts]}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-16 border-t border-[#c4c5d5] pt-6">
-              <div className="rounded-xl bg-[#1e40af]/10 p-6">
-                <p className="mb-2 text-xs font-semibold text-[#00288e]">
-                  Notificaciones leídas
-                </p>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-[#d3e4fe]">
-                  <div
-                    className="h-full bg-[#00288e]"
-                    style={{ width: `${readPercent}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-xs text-[#757684]">
-                  {readPercent}% al día (
-                  {notifications.length - counts.unread} de{" "}
-                  {notifications.length})
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Feed de notificaciones */}
-        <div className="col-span-12 lg:col-span-9">
-          <div className="overflow-hidden rounded-xl border border-[#c4c5d5] bg-white shadow-sm">
-            {loading && (
-              <p className="p-6 text-center text-sm text-[#757684]">
-                Cargando notificaciones...
-              </p>
-            )}
+      {/* Feed de notificaciones */}
+      <div className="overflow-hidden rounded-xl border border-[#c4c5d5] bg-white shadow-sm">
+        {loading && (
+          <p className="p-6 text-center text-sm text-[#757684]">
+            Cargando notificaciones...
+          </p>
+        )}
             {Object.entries(grouped).map(([day, items]) => (
               <div key={day}>
                 <div className="border-b border-[#c4c5d5] bg-[#eff4ff] px-6 py-2">
@@ -282,15 +199,11 @@ export default function RecordatoriosPage() {
                 ))}
               </div>
             ))}
-            {!loading && filtered.length === 0 && (
-              <p className="p-6 text-center text-sm text-[#757684]">
-                {notifications.length === 0
-                  ? "No tienes notificaciones todavía."
-                  : "No hay notificaciones en esta categoría."}
-              </p>
-            )}
-          </div>
-        </div>
+        {!loading && notifications.length === 0 && (
+          <p className="p-6 text-center text-sm text-[#757684]">
+            No tienes notificaciones todavía.
+          </p>
+        )}
       </div>
 
       {toast && (

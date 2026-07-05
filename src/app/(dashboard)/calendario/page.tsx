@@ -11,13 +11,24 @@ type DbEvent = {
   ends_at: string | null;
   all_day: boolean;
   color: string | null;
+  meeting_notes: string | null;
+  contact_id: string | null;
+  owner: { full_name: string } | null;
+  contact: {
+    id: string;
+    full_name: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
 };
 
 type TeamMember = {
   id: string;
   full_name: string;
-  status: "activo" | "ausente";
+  status: "activo" | "ausente" | "inhabilitado";
 };
+
+type ContactOption = { id: string; full_name: string; company: string | null };
 
 type OverdueTask = {
   id: string;
@@ -110,18 +121,18 @@ function buildMonthGrid(year: number, month: number): DayCell[] {
 export default function CalendarioPage() {
   const [viewDate, setViewDate] = useState(() => new Date());
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailEvent, setDetailEvent] = useState<DbEvent | null>(null);
   const [events, setEvents] = useState<DbEvent[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [overdue, setOverdue] = useState<OverdueTask[]>([]);
   const [version, setVersion] = useState(0);
 
-  // Campos del modal
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [color, setColor] = useState("azul");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [detailSaving, setDetailSaving] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -135,11 +146,16 @@ export default function CalendarioPage() {
 
     supabase
       .from("events")
-      .select("id, title, description, starts_at, ends_at, all_day, color")
+      .select(
+        `id, title, description, starts_at, ends_at, all_day, color,
+         meeting_notes, contact_id,
+         owner:profiles(full_name),
+         contact:contacts(id, full_name, email, phone)`,
+      )
       .gte("starts_at", monthStart)
       .lt("starts_at", monthEnd)
       .order("starts_at")
-      .then(({ data }) => setEvents(data ?? []));
+      .then(({ data }) => setEvents((data ?? []) as unknown as DbEvent[]));
   }, [year, month, version]);
 
   useEffect(() => {
@@ -149,6 +165,12 @@ export default function CalendarioPage() {
       .select("id, full_name, status")
       .order("full_name")
       .then(({ data }) => setTeam((data ?? []) as TeamMember[]));
+
+    supabase
+      .from("contacts")
+      .select("id, full_name, company")
+      .order("full_name")
+      .then(({ data }) => setContacts((data ?? []) as ContactOption[]));
 
     supabase
       .from("tasks")
@@ -182,35 +204,38 @@ export default function CalendarioPage() {
     setViewDate(new Date(year, month + delta, 1));
   }
 
+  function showToast(text: string) {
+    setToast(text);
+    setTimeout(() => setToast(null), 3000);
+  }
+
   function openModal() {
-    setTitle("");
-    setDate(new Date().toISOString().slice(0, 10));
-    setTime("09:00");
-    setColor("azul");
     setSaveError(null);
     setModalOpen(true);
   }
 
-  async function handleCreateEvent(e: React.FormEvent) {
+  async function handleCreateEvent(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
     setSaveError(null);
 
+    const form = new FormData(e.currentTarget);
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const startsAt = new Date(`${date}T${time}`);
+    const startsAt = new Date(`${form.get("date")}T${form.get("time")}`);
     const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000); // 1 hora
 
     const { error } = await supabase.from("events").insert({
-      title,
+      title: (form.get("title") as string).trim(),
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
       all_day: false,
-      color,
-      owner_id: user?.id ?? null,
+      color: form.get("color") as string,
+      owner_id: (form.get("owner_id") as string) || user?.id || null,
+      contact_id: (form.get("contact_id") as string) || null,
     });
 
     setSaving(false);
@@ -222,6 +247,64 @@ export default function CalendarioPage() {
     setVersion((v) => v + 1);
   }
 
+  // Guarda la minuta de la reunión: confirma/actualiza datos del contacto,
+  // registra los puntos tocados y los añade al historial de actividades.
+  async function handleSaveMeeting(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!detailEvent) return;
+    setDetailSaving(true);
+    setDetailError(null);
+
+    const form = new FormData(e.currentTarget);
+    const notes = ((form.get("meeting_notes") as string) ?? "").trim();
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { error: eventError } = await supabase
+      .from("events")
+      .update({ meeting_notes: notes || null })
+      .eq("id", detailEvent.id);
+
+    if (eventError) {
+      setDetailSaving(false);
+      setDetailError(eventError.message);
+      return;
+    }
+
+    if (detailEvent.contact) {
+      const { error: contactError } = await supabase
+        .from("contacts")
+        .update({
+          email: (form.get("contact_email") as string) || null,
+          phone: (form.get("contact_phone") as string) || null,
+        })
+        .eq("id", detailEvent.contact.id);
+
+      if (contactError) {
+        setDetailSaving(false);
+        setDetailError(contactError.message);
+        return;
+      }
+
+      // Historial: solo cuando se registran puntos nuevos
+      if (notes && notes !== (detailEvent.meeting_notes ?? "").trim()) {
+        await supabase.from("activities").insert({
+          type: "reunion",
+          description: `${detailEvent.title}: ${notes}`,
+          contact_id: detailEvent.contact.id,
+          user_id: user?.id ?? null,
+        });
+      }
+    }
+
+    setDetailSaving(false);
+    setDetailEvent(null);
+    setVersion((v) => v + 1);
+    showToast("Reunión actualizada correctamente.");
+  }
+
   function formatOverdueDate(iso: string) {
     const days = Math.floor(
       (Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000),
@@ -229,6 +312,9 @@ export default function CalendarioPage() {
     if (days === 0) return "Vencida hoy";
     return `Vencida hace ${days} día${days === 1 ? "" : "s"}`;
   }
+
+  const inputClass =
+    "h-10 w-full rounded-lg border border-[#c4c5d5] px-4 outline-none focus:ring-2 focus:ring-[#00288e]";
 
   return (
     <>
@@ -316,7 +402,11 @@ export default function CalendarioPage() {
                             <div
                               key={event.id}
                               title={event.title}
-                              className={`truncate rounded-sm border-l-4 px-2 py-1 text-[11px] font-semibold ${palette.bar} ${palette.text} ${palette.bg}`}
+                              onClick={() => {
+                                setDetailError(null);
+                                setDetailEvent(event);
+                              }}
+                              className={`cursor-pointer truncate rounded-sm border-l-4 px-2 py-1 text-[11px] font-semibold ${palette.bar} ${palette.text} ${palette.bg}`}
                             >
                               {event.all_day
                                 ? "Todo el día"
@@ -363,7 +453,14 @@ export default function CalendarioPage() {
               {todaysEvents.map((event) => {
                 const palette = colorFor(event);
                 return (
-                  <div key={event.id} className="cursor-pointer">
+                  <div
+                    key={event.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setDetailError(null);
+                      setDetailEvent(event);
+                    }}
+                  >
                     <p className="mb-1 text-xs font-medium text-[#757684]">
                       {event.all_day
                         ? "Todo el día"
@@ -379,11 +476,32 @@ export default function CalendarioPage() {
                       <h4 className="mb-1 text-sm font-semibold text-[#0b1c30]">
                         {event.title}
                       </h4>
-                      {event.description && (
-                        <span className="text-xs text-[#757684]">
-                          {event.description}
-                        </span>
-                      )}
+                      <div className="flex flex-col gap-0.5 text-xs text-[#757684]">
+                        {event.owner && (
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">
+                              support_agent
+                            </span>
+                            Atiende: {event.owner.full_name}
+                          </span>
+                        )}
+                        {event.contact && (
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">
+                              person
+                            </span>
+                            Contacto: {event.contact.full_name}
+                          </span>
+                        )}
+                        {event.meeting_notes && (
+                          <span className="flex items-center gap-1 text-[#006a61]">
+                            <span className="material-symbols-outlined text-[14px]">
+                              task_alt
+                            </span>
+                            Con minuta registrada
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -415,7 +533,9 @@ export default function CalendarioPage() {
                         className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
                           member.status === "activo"
                             ? "bg-green-500"
-                            : "bg-orange-400"
+                            : member.status === "ausente"
+                              ? "bg-orange-400"
+                              : "bg-gray-400"
                         }`}
                       />
                     </div>
@@ -424,7 +544,11 @@ export default function CalendarioPage() {
                     </span>
                   </div>
                   <span className="text-xs text-[#757684]">
-                    {member.status === "activo" ? "Activo" : "Ausente"}
+                    {member.status === "activo"
+                      ? "Activo"
+                      : member.status === "ausente"
+                        ? "Ausente"
+                        : "Inhabilitado"}
                   </span>
                 </div>
               ))}
@@ -467,11 +591,11 @@ export default function CalendarioPage() {
       {modalOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0b1c30]/40 backdrop-blur-sm"
-          onClick={() => setModalOpen(false)}
+          onMouseDown={() => setModalOpen(false)}
         >
           <div
             className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#c4c5d5] p-6">
               <h2 className="text-xl font-semibold text-[#0b1c30]">
@@ -492,11 +616,11 @@ export default function CalendarioPage() {
                 </label>
                 <input
                   type="text"
+                  name="title"
                   required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  autoFocus
                   placeholder="ej. Kickoff de Proyecto"
-                  className="h-10 w-full rounded-lg border border-[#c4c5d5] px-4 outline-none focus:ring-2 focus:ring-[#00288e]"
+                  className={inputClass}
                 />
               </div>
 
@@ -507,10 +631,10 @@ export default function CalendarioPage() {
                   </label>
                   <input
                     type="date"
+                    name="date"
                     required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-[#c4c5d5] px-4 outline-none focus:ring-2 focus:ring-[#00288e]"
+                    defaultValue={new Date().toISOString().slice(0, 10)}
+                    className={inputClass}
                   />
                 </div>
                 <div>
@@ -519,11 +643,47 @@ export default function CalendarioPage() {
                   </label>
                   <input
                     type="time"
+                    name="time"
                     required
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-[#c4c5d5] px-4 outline-none focus:ring-2 focus:ring-[#00288e]"
+                    defaultValue="09:00"
+                    className={inputClass}
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold text-[#757684]">
+                    ¿Quién atiende la reunión?
+                  </label>
+                  <select name="owner_id" defaultValue="" className={inputClass}>
+                    <option value="">Yo (usuario actual)</option>
+                    {team
+                      .filter((m) => m.status !== "inhabilitado")
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.full_name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold text-[#757684]">
+                    Contacto
+                  </label>
+                  <select
+                    name="contact_id"
+                    defaultValue=""
+                    className={inputClass}
+                  >
+                    <option value="">Sin contacto</option>
+                    {contacts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.full_name}
+                        {c.company ? ` — ${c.company}` : ""}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -544,8 +704,8 @@ export default function CalendarioPage() {
                       <input
                         type="radio"
                         name="color"
-                        checked={color === option.key}
-                        onChange={() => setColor(option.key)}
+                        value={option.key}
+                        defaultChecked={option.key === "azul"}
                         className="peer hidden"
                       />
                       <div
@@ -584,6 +744,141 @@ export default function CalendarioPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Modal: Detalle de reunión (confirmar datos + puntos tocados) */}
+      {detailEvent && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0b1c30]/40 p-4 backdrop-blur-sm"
+          onMouseDown={() => setDetailEvent(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#c4c5d5] p-6">
+              <div>
+                <h2 className="text-xl font-semibold text-[#0b1c30]">
+                  {detailEvent.title}
+                </h2>
+                <p className="text-xs text-[#757684]">
+                  {new Date(detailEvent.starts_at).toLocaleDateString(
+                    "es-ES",
+                    { day: "numeric", month: "long", year: "numeric" },
+                  )}
+                  {!detailEvent.all_day &&
+                    ` • ${formatTime(detailEvent.starts_at)}`}
+                  {detailEvent.owner &&
+                    ` • Atiende: ${detailEvent.owner.full_name}`}
+                </p>
+              </div>
+              <button
+                onClick={() => setDetailEvent(null)}
+                className="rounded-full p-2 transition-colors hover:bg-[#eff4ff]"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form className="space-y-6 p-8" onSubmit={handleSaveMeeting}>
+              {detailEvent.contact ? (
+                <div className="rounded-xl border border-[#c4c5d5] bg-[#f8f9ff] p-5">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#00288e]">
+                    Confirmar datos del contacto
+                  </h3>
+                  <p className="mb-3 text-sm font-semibold text-[#0b1c30]">
+                    {detailEvent.contact.full_name}
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-[#757684]">
+                        Correo electrónico
+                      </label>
+                      <input
+                        type="email"
+                        name="contact_email"
+                        defaultValue={detailEvent.contact.email ?? ""}
+                        placeholder="Sin correo"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-[#757684]">
+                        Teléfono
+                      </label>
+                      <input
+                        type="tel"
+                        name="contact_phone"
+                        defaultValue={detailEvent.contact.phone ?? ""}
+                        placeholder="Sin teléfono"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-[#757684]">
+                    Verifica estos datos con el contacto durante la reunión y
+                    corrígelos si es necesario.
+                  </p>
+                </div>
+              ) : (
+                <p className="rounded-lg bg-[#eff4ff] px-4 py-3 text-sm text-[#757684]">
+                  Esta reunión no tiene un contacto vinculado.
+                </p>
+              )}
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-[#757684]">
+                  Puntos tocados en la reunión (historial)
+                </label>
+                <textarea
+                  name="meeting_notes"
+                  rows={5}
+                  defaultValue={detailEvent.meeting_notes ?? ""}
+                  placeholder="ej. Se presentó la propuesta comercial, el cliente pidió ajustar el presupuesto..."
+                  className="w-full rounded-lg border border-[#c4c5d5] p-4 text-sm outline-none focus:ring-2 focus:ring-[#00288e]"
+                />
+                {detailEvent.contact && (
+                  <p className="mt-1 text-[11px] text-[#757684]">
+                    Al guardar, los puntos se registran también en el historial
+                    de actividades del contacto.
+                  </p>
+                )}
+              </div>
+
+              {detailError && (
+                <p className="rounded-lg bg-[#ba1a1a]/10 px-4 py-2 text-sm font-medium text-[#ba1a1a]">
+                  Error al guardar: {detailError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => setDetailEvent(null)}
+                  className="rounded-lg border border-[#c4c5d5] px-6 py-2 text-sm font-semibold text-[#0b1c30] transition-colors hover:bg-[#eff4ff]"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="submit"
+                  disabled={detailSaving}
+                  className="rounded-lg bg-[#006a61] px-6 py-2 text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95 disabled:opacity-70"
+                >
+                  {detailSaving ? "Guardando..." : "Guardar Minuta"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-8 right-8 z-[100] flex items-center gap-3 rounded-lg bg-[#213145] px-6 py-4 text-sm text-white shadow-lg">
+          <span className="material-symbols-outlined text-[#6bd8cb]">
+            check_circle
+          </span>
+          {toast}
         </div>
       )}
     </>

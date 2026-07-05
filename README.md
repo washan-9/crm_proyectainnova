@@ -34,6 +34,7 @@ cp .env.example .env.local
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase (ej. `https://xxxx.supabase.co`) | Supabase Dashboard → **Settings → API** → *Project URL* |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave pública (anon / publishable) | Supabase Dashboard → **Settings → API Keys** → *anon public* |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servidor para crear/inhabilitar empleados (pantalla Gestión de Equipo). **Nunca** exponerla al navegador | Supabase Dashboard → **Settings → API Keys** → *service_role* |
 
 > ⚠️ `.env.local` está en `.gitignore` y **nunca se sube al repo**. Pide los valores del proyecto compartido a un compañero por un canal seguro, o usa tu propio proyecto de Supabase.
 
@@ -119,6 +120,7 @@ supabase/
 
 Definidos en la base de datos (`supabase/schema.sql`):
 
-- **Roles** (`profiles.role`): `administrador`, `gerente`, `colaborador`
+- **Roles** (`profiles.role`): `administrador`, `teleoperador`, `vendedor`
+- Si tu base de datos se creó antes de julio 2026, ejecuta `supabase/migration_2026-07-05_roles_reuniones.sql` en el SQL Editor para actualizar roles, el estado `inhabilitado` y la columna de minutas de reunión
 - **Permisos granulares**: tabla `permissions` + `profile_permissions`, gestionables desde la pantalla de Usuarios
 - **RLS**: los perfiles solo se editan a sí mismos; catálogos de permisos solo los escriben administradores; las notificaciones son privadas por usuario

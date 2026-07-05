@@ -9,13 +9,13 @@ import { createClient } from "@/lib/supabase/client";
 
 type CurrentUser = {
   full_name: string;
-  role: "administrador" | "gerente" | "colaborador";
+  role: "administrador" | "teleoperador" | "vendedor";
 };
 
 const roleLabels: Record<CurrentUser["role"], string> = {
   administrador: "Administrador",
-  gerente: "Gerente",
-  colaborador: "Colaborador",
+  teleoperador: "Teleoperador",
+  vendedor: "Vendedor",
 };
 
 export function SidebarNav() {
@@ -57,7 +57,12 @@ export function SidebarNav() {
       </div>
 
       <nav className="flex-grow space-y-2">
-        {navItems.map((item) => {
+        {navItems
+          .filter(
+            (item) =>
+              !(item.href === "/leads" && currentUser?.role === "administrador"),
+          )
+          .map((item) => {
           const isActive =
             item.href === "/"
               ? pathname === "/"

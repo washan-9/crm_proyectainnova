@@ -18,7 +18,7 @@ type Lead = {
 const statusLabels: Record<LeadStatus, string> = {
   nuevo: "Nuevo",
   contactado: "Contactado",
-  calificado: "Calificado",
+  calificado: "Prospecto",
   perdido: "Perdido",
 };
 
@@ -132,7 +132,7 @@ export default function LeadsPage() {
             <option value="Todos">Todos los estados</option>
             <option value="nuevo">Nuevo</option>
             <option value="contactado">Contactado</option>
-            <option value="calificado">Calificado</option>
+            <option value="calificado">Prospecto</option>
             <option value="perdido">Perdido</option>
           </select>
         </div>

@@ -6,8 +6,8 @@
 -- ------------------------------------------------------------
 -- 1. ENUMS
 -- ------------------------------------------------------------
-create type public.app_role as enum ('administrador', 'gerente', 'colaborador');
-create type public.user_status as enum ('activo', 'ausente');
+create type public.app_role as enum ('administrador', 'teleoperador', 'vendedor');
+create type public.user_status as enum ('activo', 'ausente', 'inhabilitado');
 create type public.lead_status as enum ('nuevo', 'contactado', 'calificado', 'perdido');
 create type public.contact_tag as enum ('cliente', 'socio', 'proveedor');
 create type public.deal_status as enum ('abierto', 'ganado', 'perdido');
@@ -23,7 +23,7 @@ create table public.profiles (
   full_name   text not null,
   email       text not null unique,
   job_title   text,                                        -- ej. "Ejecutiva Senior de Ventas"
-  role        public.app_role not null default 'colaborador',
+  role        public.app_role not null default 'vendedor',
   status      public.user_status not null default 'activo',
   avatar_url  text,
   created_at  timestamptz not null default now(),
@@ -119,6 +119,7 @@ create table public.events (
   ends_at     timestamptz,
   all_day     boolean not null default false,
   color       text,                                        -- clase/etiqueta de color en la UI
+  meeting_notes text,                                      -- minuta: puntos tocados en la reunión
   lead_id     uuid references public.leads (id) on delete set null,
   contact_id  uuid references public.contacts (id) on delete set null,
   owner_id    uuid references public.profiles (id) on delete set null,

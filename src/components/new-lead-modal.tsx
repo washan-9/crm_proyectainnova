@@ -9,8 +9,6 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-type LeadStatus = "nuevo" | "contactado" | "calificado" | "perdido";
-
 type NewLeadContextValue = {
   openModal: () => void;
   /** Se incrementa cada vez que se crea un lead; útil para refrescar listas */
@@ -58,12 +56,6 @@ function NewLeadModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [company, setCompany] = useState("");
-  const [status, setStatus] = useState<LeadStatus>("nuevo");
-  const [assignedTo, setAssignedTo] = useState("");
   const [profiles, setProfiles] = useState<ProfileOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,23 +69,26 @@ function NewLeadModal({
       .then(({ data }) => setProfiles(data ?? []));
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Inputs no controlados: los valores se leen del formulario al enviar.
+  // Evita que el estado por tecla interfiera con la escritura en el modal.
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
+    const form = new FormData(e.currentTarget);
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     const { error: insertError } = await supabase.from("leads").insert({
-      full_name: fullName,
-      email: email || null,
-      phone: phone || null,
-      company: company || null,
-      status,
-      assigned_to: assignedTo || null,
+      full_name: (form.get("full_name") as string).trim(),
+      email: (form.get("email") as string) || null,
+      phone: (form.get("phone") as string) || null,
+      company: (form.get("company") as string) || null,
+      status: form.get("status") as string,
+      assigned_to: (form.get("assigned_to") as string) || null,
       created_by: user?.id ?? null,
     });
 
@@ -111,11 +106,11 @@ function NewLeadModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1c30]/50 p-4"
-      onClick={onClose}
+      onMouseDown={onClose}
     >
       <div
         className="w-full max-w-lg rounded-xl bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[#c4c5d5] bg-[#eff4ff] px-6 py-4">
           <h3 className="text-xl font-semibold text-[#0b1c30]">Nuevo Lead</h3>
@@ -134,9 +129,9 @@ function NewLeadModal({
             </label>
             <input
               type="text"
+              name="full_name"
               required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              autoFocus
               placeholder="Nombre del lead"
               className={inputClass}
             />
@@ -149,8 +144,7 @@ function NewLeadModal({
               </label>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                name="email"
                 placeholder="nombre@empresa.com"
                 className={inputClass}
               />
@@ -161,8 +155,7 @@ function NewLeadModal({
               </label>
               <input
                 type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                name="phone"
                 placeholder="+51 999 999 999"
                 className={inputClass}
               />
@@ -175,8 +168,7 @@ function NewLeadModal({
             </label>
             <input
               type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
+              name="company"
               placeholder="Nombre de la empresa"
               className={inputClass}
             />
@@ -187,14 +179,10 @@ function NewLeadModal({
               <label className="ml-1 text-xs font-medium text-[#444653]">
                 Estado
               </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as LeadStatus)}
-                className={inputClass}
-              >
+              <select name="status" defaultValue="nuevo" className={inputClass}>
                 <option value="nuevo">Nuevo</option>
                 <option value="contactado">Contactado</option>
-                <option value="calificado">Calificado</option>
+                <option value="calificado">Prospecto</option>
                 <option value="perdido">Perdido</option>
               </select>
             </div>
@@ -202,11 +190,7 @@ function NewLeadModal({
               <label className="ml-1 text-xs font-medium text-[#444653]">
                 Asignado a
               </label>
-              <select
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                className={inputClass}
-              >
+              <select name="assigned_to" defaultValue="" className={inputClass}>
                 <option value="">Sin asignar</option>
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id}>

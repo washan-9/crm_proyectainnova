@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  createEmployee,
+  setEmployeeAccess,
+  type EmployeeRole,
+} from "./actions";
 
-type HierarchyRole = "administrador" | "gerente" | "colaborador";
-type Status = "activo" | "ausente";
+type Status = "activo" | "ausente" | "inhabilitado";
 
 type Permission = { code: string; title: string; icon: string | null };
 
@@ -13,23 +17,24 @@ type Employee = {
   full_name: string;
   email: string;
   job_title: string | null;
-  role: HierarchyRole;
+  role: EmployeeRole;
   status: Status;
   profile_permissions: { permission: Permission }[];
 };
 
-const roleLabels: Record<HierarchyRole, string> = {
+const roleLabels: Record<EmployeeRole, string> = {
   administrador: "Administrador",
-  gerente: "Gerente",
-  colaborador: "Colaborador",
+  teleoperador: "Teleoperador",
+  vendedor: "Vendedor",
 };
 
 const statusLabels: Record<Status, string> = {
   activo: "Activo",
   ausente: "Ausente",
+  inhabilitado: "Inhabilitado",
 };
 
-const roleOptions = Object.keys(roleLabels) as HierarchyRole[];
+const roleOptions = Object.keys(roleLabels) as EmployeeRole[];
 
 const avatarPalette = [
   { bg: "bg-[#dde1ff]", text: "text-[#00288e]" },
@@ -48,7 +53,7 @@ export default function UsuariosPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<HierarchyRole | "todos">(
+  const [roleFilter, setRoleFilter] = useState<EmployeeRole | "todos">(
     "todos",
   );
   const [statusFilter, setStatusFilter] = useState<Status | "todos">("todos");
@@ -57,7 +62,14 @@ export default function UsuariosPage() {
     error?: boolean;
   } | null>(null);
 
-  useEffect(() => {
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
+  const [actionsFor, setActionsFor] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  const loadEmployees = useCallback(() => {
     const supabase = createClient();
     supabase
       .from("profiles")
@@ -70,10 +82,25 @@ export default function UsuariosPage() {
         if (error) {
           setLoadError(error.message);
         } else {
+          setLoadError(null);
           setEmployees((data ?? []) as unknown as Employee[]);
         }
         setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    loadEmployees();
+  }, [loadEmployees]);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+        setActionsFor(null);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
   function showToast(text: string, error = false) {
@@ -81,7 +108,7 @@ export default function UsuariosPage() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  async function updateRole(id: string, role: HierarchyRole) {
+  async function updateRole(id: string, role: EmployeeRole) {
     const previous = employees;
     setEmployees((prev) =>
       prev.map((e) => (e.id === id ? { ...e, role } : e)),
@@ -107,6 +134,78 @@ export default function UsuariosPage() {
     showToast("Rol actualizado correctamente.");
   }
 
+  async function handleAddEmployee(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setModalError(null);
+
+    const form = new FormData(e.currentTarget);
+    const result = await createEmployee({
+      full_name: (form.get("full_name") as string).trim(),
+      email: (form.get("email") as string).trim(),
+      password: form.get("password") as string,
+      job_title: ((form.get("job_title") as string) || "").trim() || null,
+      role: form.get("role") as EmployeeRole,
+    });
+
+    setBusy(false);
+    if (!result.ok) {
+      setModalError(result.error);
+      return;
+    }
+    setAddModalOpen(false);
+    showToast("Empleado creado correctamente.");
+    loadEmployees();
+  }
+
+  async function handleEditEmployee(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editEmployee) return;
+    setBusy(true);
+    setModalError(null);
+
+    const form = new FormData(e.currentTarget);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: (form.get("full_name") as string).trim(),
+        job_title: ((form.get("job_title") as string) || "").trim() || null,
+        role: form.get("role") as EmployeeRole,
+        status: form.get("status") as Status,
+      })
+      .eq("id", editEmployee.id)
+      .select("id");
+
+    setBusy(false);
+    if (error || !data || data.length === 0) {
+      setModalError(
+        error?.message ??
+          "No tienes permiso para modificar empleados (solo administradores).",
+      );
+      return;
+    }
+    setEditEmployee(null);
+    showToast("Datos actualizados correctamente.");
+    loadEmployees();
+  }
+
+  async function toggleAccess(employee: Employee) {
+    setActionsFor(null);
+    const enable = employee.status === "inhabilitado";
+    const result = await setEmployeeAccess(employee.id, enable);
+    if (!result.ok) {
+      showToast(result.error, true);
+      return;
+    }
+    showToast(
+      enable
+        ? `${employee.full_name} fue habilitado nuevamente.`
+        : `${employee.full_name} fue inhabilitado (ya no puede iniciar sesión).`,
+    );
+    loadEmployees();
+  }
+
   const filtered = useMemo(
     () =>
       employees.filter(
@@ -116,6 +215,9 @@ export default function UsuariosPage() {
       ),
     [employees, roleFilter, statusFilter],
   );
+
+  const inputClass =
+    "h-10 w-full rounded-lg border border-[#c4c5d5] bg-white px-4 text-sm outline-none transition-all focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/20";
 
   return (
     <>
@@ -129,13 +231,13 @@ export default function UsuariosPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 rounded-xl bg-[#d3e4fe] px-6 py-3 text-sm font-semibold text-[#00288e] transition-colors hover:bg-[#c4c5d5]">
-            <span className="material-symbols-outlined text-[20px]">
-              file_download
-            </span>
-            Exportar Lista
-          </button>
-          <button className="flex items-center gap-2 rounded-xl bg-[#006a61] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl">
+          <button
+            onClick={() => {
+              setModalError(null);
+              setAddModalOpen(true);
+            }}
+            className="flex items-center gap-2 rounded-xl bg-[#006a61] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl"
+          >
             <span className="material-symbols-outlined text-[20px]">
               person_add
             </span>
@@ -154,7 +256,7 @@ export default function UsuariosPage() {
             <select
               value={roleFilter}
               onChange={(e) =>
-                setRoleFilter(e.target.value as HierarchyRole | "todos")
+                setRoleFilter(e.target.value as EmployeeRole | "todos")
               }
               className="rounded-lg border border-[#c4c5d5] bg-[#eff4ff] px-4 py-2 text-xs font-semibold outline-none focus:border-[#00288e]"
             >
@@ -175,6 +277,7 @@ export default function UsuariosPage() {
               <option value="todos">Todos los Estados</option>
               <option value="activo">Activo</option>
               <option value="ausente">Ausente</option>
+              <option value="inhabilitado">Inhabilitado</option>
             </select>
           </div>
         </div>
@@ -233,10 +336,13 @@ export default function UsuariosPage() {
               )}
               {filtered.map((employee) => {
                 const avatar = avatarFor(employee.full_name);
+                const disabled = employee.status === "inhabilitado";
                 return (
                   <tr
                     key={employee.id}
-                    className="transition-colors hover:bg-[#eff4ff]/50"
+                    className={`transition-colors hover:bg-[#eff4ff]/50 ${
+                      disabled ? "opacity-60" : ""
+                    }`}
                   >
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-4">
@@ -268,7 +374,7 @@ export default function UsuariosPage() {
                         onChange={(e) =>
                           updateRole(
                             employee.id,
-                            e.target.value as HierarchyRole,
+                            e.target.value as EmployeeRole,
                           )
                         }
                         className="rounded-lg border border-[#c4c5d5] bg-white px-3 py-1.5 text-sm font-semibold text-[#0b1c30] outline-none focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/20"
@@ -285,14 +391,18 @@ export default function UsuariosPage() {
                         className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
                           employee.status === "activo"
                             ? "bg-[#86f2e4]/40 text-[#006f66]"
-                            : "bg-[#e5eeff] text-[#444653]"
+                            : employee.status === "ausente"
+                              ? "bg-[#e5eeff] text-[#444653]"
+                              : "bg-[#ba1a1a]/10 text-[#ba1a1a]"
                         }`}
                       >
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
                             employee.status === "activo"
                               ? "bg-[#006a61]"
-                              : "bg-[#757684]"
+                              : employee.status === "ausente"
+                                ? "bg-[#757684]"
+                                : "bg-[#ba1a1a]"
                           }`}
                         />
                         {statusLabels[employee.status]}
@@ -315,11 +425,53 @@ export default function UsuariosPage() {
                       </div>
                     </td>
                     <td className="px-8 py-4 text-right">
-                      <button className="p-2 text-[#757684] transition-colors hover:text-[#00288e]">
-                        <span className="material-symbols-outlined">
-                          more_vert
-                        </span>
-                      </button>
+                      <div
+                        className="relative inline-block"
+                        ref={actionsFor === employee.id ? actionsRef : null}
+                      >
+                        <button
+                          onClick={() =>
+                            setActionsFor((prev) =>
+                              prev === employee.id ? null : employee.id,
+                            )
+                          }
+                          className="p-2 text-[#757684] transition-colors hover:text-[#00288e]"
+                        >
+                          <span className="material-symbols-outlined">
+                            more_vert
+                          </span>
+                        </button>
+                        {actionsFor === employee.id && (
+                          <div className="absolute right-0 top-10 z-20 w-56 overflow-hidden rounded-xl border border-[#c4c5d5] bg-white text-left shadow-2xl">
+                            <button
+                              onClick={() => {
+                                setActionsFor(null);
+                                setModalError(null);
+                                setEditEmployee(employee);
+                              }}
+                              className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#0b1c30] transition-colors hover:bg-[#eff4ff]"
+                            >
+                              <span className="material-symbols-outlined text-[20px] text-[#00288e]">
+                                edit
+                              </span>
+                              Modificar datos
+                            </button>
+                            <button
+                              onClick={() => toggleAccess(employee)}
+                              className={`flex w-full items-center gap-3 border-t border-[#c4c5d5]/40 px-4 py-3 text-sm font-semibold transition-colors hover:bg-[#eff4ff] ${
+                                disabled ? "text-[#006a61]" : "text-[#ba1a1a]"
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                {disabled ? "how_to_reg" : "person_off"}
+                              </span>
+                              {disabled
+                                ? "Habilitar usuario"
+                                : "Inhabilitar usuario"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -335,9 +487,243 @@ export default function UsuariosPage() {
         </div>
       </div>
 
+      {/* Modal: Agregar Empleado */}
+      {addModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0b1c30]/50 p-4"
+          onMouseDown={() => setAddModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl bg-white shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#c4c5d5] bg-[#eff4ff] px-6 py-4">
+              <h3 className="text-xl font-semibold text-[#0b1c30]">
+                Agregar Empleado
+              </h3>
+              <button
+                onClick={() => setAddModalOpen(false)}
+                className="material-symbols-outlined text-[#757684] transition-colors hover:text-[#ba1a1a]"
+              >
+                close
+              </button>
+            </div>
+
+            <form onSubmit={handleAddEmployee} className="space-y-4 p-6">
+              <div className="space-y-1">
+                <label className="ml-1 text-xs font-medium text-[#444653]">
+                  Nombre completo *
+                </label>
+                <input
+                  type="text"
+                  name="full_name"
+                  required
+                  autoFocus
+                  placeholder="Nombre del empleado"
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="ml-1 text-xs font-medium text-[#444653]">
+                    Correo electrónico *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="nombre@empresa.com"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="ml-1 text-xs font-medium text-[#444653]">
+                    Contraseña *
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    minLength={6}
+                    placeholder="Mínimo 6 caracteres"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="ml-1 text-xs font-medium text-[#444653]">
+                    Cargo
+                  </label>
+                  <input
+                    type="text"
+                    name="job_title"
+                    placeholder="ej. Ejecutivo de Ventas"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="ml-1 text-xs font-medium text-[#444653]">
+                    Rol
+                  </label>
+                  <select
+                    name="role"
+                    defaultValue="vendedor"
+                    className={inputClass}
+                  >
+                    {roleOptions.map((role) => (
+                      <option key={role} value={role}>
+                        {roleLabels[role]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {modalError && (
+                <p className="rounded-lg bg-[#ba1a1a]/10 px-4 py-2 text-sm font-medium text-[#ba1a1a]">
+                  {modalError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  className="rounded-lg border border-[#c4c5d5] px-6 py-2 text-sm font-semibold text-[#444653] transition-colors hover:bg-[#eff4ff]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-lg bg-[#006a61] px-6 py-2 text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
+                >
+                  {busy ? "Creando..." : "Crear Empleado"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Modificar datos */}
+      {editEmployee && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0b1c30]/50 p-4"
+          onMouseDown={() => setEditEmployee(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl bg-white shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#c4c5d5] bg-[#eff4ff] px-6 py-4">
+              <h3 className="text-xl font-semibold text-[#0b1c30]">
+                Modificar Datos
+              </h3>
+              <button
+                onClick={() => setEditEmployee(null)}
+                className="material-symbols-outlined text-[#757684] transition-colors hover:text-[#ba1a1a]"
+              >
+                close
+              </button>
+            </div>
+
+            <form onSubmit={handleEditEmployee} className="space-y-4 p-6">
+              <p className="text-xs text-[#757684]">
+                {editEmployee.email} (el correo no se puede cambiar)
+              </p>
+              <div className="space-y-1">
+                <label className="ml-1 text-xs font-medium text-[#444653]">
+                  Nombre completo *
+                </label>
+                <input
+                  type="text"
+                  name="full_name"
+                  required
+                  defaultValue={editEmployee.full_name}
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="ml-1 text-xs font-medium text-[#444653]">
+                    Cargo
+                  </label>
+                  <input
+                    type="text"
+                    name="job_title"
+                    defaultValue={editEmployee.job_title ?? ""}
+                    placeholder="ej. Ejecutivo de Ventas"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="ml-1 text-xs font-medium text-[#444653]">
+                    Rol
+                  </label>
+                  <select
+                    name="role"
+                    defaultValue={editEmployee.role}
+                    className={inputClass}
+                  >
+                    {roleOptions.map((role) => (
+                      <option key={role} value={role}>
+                        {roleLabels[role]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="ml-1 text-xs font-medium text-[#444653]">
+                  Estado
+                </label>
+                <select
+                  name="status"
+                  defaultValue={editEmployee.status}
+                  className={inputClass}
+                >
+                  <option value="activo">Activo</option>
+                  <option value="ausente">Ausente</option>
+                  <option value="inhabilitado">Inhabilitado</option>
+                </select>
+              </div>
+
+              {modalError && (
+                <p className="rounded-lg bg-[#ba1a1a]/10 px-4 py-2 text-sm font-medium text-[#ba1a1a]">
+                  {modalError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditEmployee(null)}
+                  className="rounded-lg border border-[#c4c5d5] px-6 py-2 text-sm font-semibold text-[#444653] transition-colors hover:bg-[#eff4ff]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-lg bg-[#00288e] px-6 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#00288e]/90 active:scale-[0.98] disabled:opacity-70"
+                >
+                  {busy ? "Guardando..." : "Guardar Cambios"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div
-          className={`fixed bottom-8 left-1/2 z-50 -translate-x-1/2 rounded-lg px-6 py-3 text-sm font-semibold text-white shadow-lg ${
+          className={`fixed bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded-lg px-6 py-3 text-sm font-semibold text-white shadow-lg ${
             toast.error ? "bg-[#ba1a1a]" : "bg-[#006a61]"
           }`}
         >

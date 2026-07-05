@@ -74,6 +74,8 @@ export default function ContactosPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(true);
+  const [search, setSearch] = useState("");
+  const [tagFilter, setTagFilter] = useState<Tag | "todas">("todas");
 
   useEffect(() => {
     const supabase = createClient();
@@ -101,6 +103,17 @@ export default function ContactosPage() {
       });
   }, []);
 
+  const filteredContacts = contacts.filter((contact) => {
+    const matchesTag = tagFilter === "todas" || contact.tag === tagFilter;
+    const term = search.trim().toLowerCase();
+    const matchesSearch =
+      term === "" ||
+      contact.full_name.toLowerCase().includes(term) ||
+      (contact.company ?? "").toLowerCase().includes(term) ||
+      (contact.email ?? "").toLowerCase().includes(term);
+    return matchesTag && matchesSearch;
+  });
+
   const selected = contacts.find((c) => c.id === selectedId) ?? null;
 
   return (
@@ -114,19 +127,29 @@ export default function ContactosPage() {
             Gestiona tus relaciones corporativas e historial de comunicación.
           </p>
         </div>
-        <div className="flex gap-4">
-          <button className="flex items-center gap-2 rounded-lg border border-[#757684] bg-white px-6 py-2 text-sm font-semibold text-[#444653] transition-colors hover:bg-[#eff4ff]">
-            <span className="material-symbols-outlined text-[20px]">
-              filter_alt
+        <div className="flex items-center gap-4">
+          <div className="relative w-72">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#757684]">
+              search
             </span>
-            Filtros
-          </button>
-          <button className="flex items-center gap-2 rounded-lg bg-[#006a61] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95">
-            <span className="material-symbols-outlined text-[20px]">
-              person_add
-            </span>
-            Agregar Contacto
-          </button>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, empresa o email..."
+              className="w-full rounded-lg border border-[#c4c5d5] bg-white py-2 pl-10 pr-4 text-sm outline-none focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/20"
+            />
+          </div>
+          <select
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value as Tag | "todas")}
+            className="rounded-lg border border-[#c4c5d5] bg-white px-4 py-2 text-sm font-semibold text-[#444653] outline-none focus:border-[#00288e]"
+          >
+            <option value="todas">Todas las etiquetas</option>
+            <option value="cliente">Cliente</option>
+            <option value="socio">Socio</option>
+            <option value="proveedor">Proveedor</option>
+          </select>
         </div>
       </div>
 
@@ -178,17 +201,19 @@ export default function ContactosPage() {
                     </td>
                   </tr>
                 )}
-                {!loading && !loadError && contacts.length === 0 && (
+                {!loading && !loadError && filteredContacts.length === 0 && (
                   <tr>
                     <td
                       colSpan={6}
                       className="px-6 py-4 text-center text-sm text-[#757684]"
                     >
-                      Aún no hay contactos registrados.
+                      {contacts.length === 0
+                        ? "Aún no hay contactos registrados."
+                        : "No se encontraron contactos con esos filtros."}
                     </td>
                   </tr>
                 )}
-                {contacts.map((contact) => {
+                {filteredContacts.map((contact) => {
                   const avatar = avatarFor(contact.full_name);
                   return (
                     <tr
@@ -246,7 +271,8 @@ export default function ContactosPage() {
 
           <div className="flex items-center justify-between border-t border-[#c4c5d5] bg-white p-6">
             <p className="text-sm text-[#757684]">
-              Mostrando {contacts.length} contactos
+              Mostrando {filteredContacts.length} de {contacts.length}{" "}
+              contactos
             </p>
           </div>
         </div>
