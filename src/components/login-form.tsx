@@ -115,7 +115,7 @@ export function LoginForm() {
         </label>
         <a
           href="#"
-          className="text-sm font-semibold text-[#00288e] hover:underline"
+          className="hidden text-sm font-semibold text-[#00288e] hover:underline"
         >
           ¿Olvidaste tu contraseña?
         </a>

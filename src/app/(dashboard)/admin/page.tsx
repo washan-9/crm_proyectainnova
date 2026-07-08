@@ -341,7 +341,7 @@ export default function AdminPage() {
 
           <div className="space-y-5">
             {/* Solicitudes de eliminación */}
-            <div className="rounded-xl border border-[#c4c5d5] bg-white p-5">
+            <div className="hidden rounded-xl border border-[#c4c5d5] bg-white p-5">
               <h3 className="mb-3 text-sm font-semibold text-[#0b1c30]">Solicitudes de eliminación de datos</h3>
               {pendingRequests.length === 0 && (
                 <p className="text-xs text-[#757684]">No hay solicitudes pendientes.</p>
@@ -453,7 +453,7 @@ export default function AdminPage() {
                   <input type="text" name="job_title" placeholder="ej. Ejecutiva de Ventas" className={inputClass} />
                 </div>
               </div>
-              {modalError && <p className="rounded-lg bg-[#ba1a1a]/10 px-4 py-2 text-sm font-medium text-[#ba1a1a]">{modalError}</p>}
+              {modalError && <p className="hidden rounded-lg bg-[#ba1a1a]/10 px-4 py-2 text-sm font-medium text-[#ba1a1a]">{modalError}</p>}
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setCreating(false)} className="rounded-lg border border-[#c4c5d5] px-6 py-2 text-sm font-semibold text-[#444653] hover:bg-[#eff4ff]">
                   Cancelar

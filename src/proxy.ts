@@ -32,8 +32,9 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+  const isZapierWebhook = request.nextUrl.pathname.startsWith("/api/zapier/");
 
-  if (!user && !isLoginPage) {
+  if (!user && !isLoginPage && !isZapierWebhook) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

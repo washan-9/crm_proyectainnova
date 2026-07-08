@@ -38,6 +38,12 @@ export const navItems: NavItem[] = [
     roles: ["vendedor", "administrador"],
   },
   {
+    href: "/calendario",
+    label: "Calendario",
+    section: "Continuidad comercial",
+    roles: ["vendedor", "administrador"],
+  },
+  {
     href: "/seguimiento",
     label: "Seguimiento Comercial",
     section: "Continuidad comercial",

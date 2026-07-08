@@ -64,7 +64,7 @@ export default function LoginPage() {
 
             <LoginForm />
 
-            <div className="mt-12 text-center">
+            <div className="hidden mt-12 text-center">
               <p className="text-sm text-[#444653]">
                 ¿No tienes cuenta?{" "}
                 <a
