@@ -25,7 +25,14 @@ type CalendarEvent = {
   id: string;
   purpose: string;
   scheduled_at: string;
+  modality: "virtual" | "presencial";
+  location: string | null;
+  status: "programada" | "realizada" | "no_asistio" | "cancelada";
+  result_notes: string | null;
+  commitment: string | null;
+  commitment_due: string | null;
   prospect: { id: string; full_name: string } | null;
+  created_by: string;
 };
 
 type Prospect = {
